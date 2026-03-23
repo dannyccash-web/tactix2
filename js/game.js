@@ -701,18 +701,17 @@ const Game = (() => {
     const spriteImg = TactixEngine.getImage(unit.team.spriteKey);
     if (!spriteImg) return;
 
-    const size = Board.HEX_R * 2.2;
+    // Soldier sprite is 1024×1536 — a single full-body soldier
+    // Draw so feet are just below hex center, scaled to fit within 1.8× hex radius
+    const sw = Board.HEX_R * 1.8;    // display width
+    const sh = sw * (1536 / 1024);   // maintain aspect ratio → ~2.7 × HEX_R tall
+    const sx = x - sw / 2;
+    const sy = y - sh + Board.HEX_R * 0.7;  // feet sit near hex center
 
     ctx.save();
-    ctx.globalAlpha = unit.stunned ? 0.55 : 1;
-
-    // Stun overlay: white tint
-    if (unit.stunned) {
-      ctx.filter = 'brightness(2) saturate(0)';
-    }
-
-    // Draw soldier sprite (full image, scaled to fit tile)
-    ctx.drawImage(spriteImg, x - size / 2, y - size * 0.85, size, size * 1.5);
+    ctx.globalAlpha = unit.stunned ? 0.5 : 1;
+    if (unit.stunned) ctx.filter = 'brightness(2.2) saturate(0)';
+    ctx.drawImage(spriteImg, sx, sy, sw, sh);
     ctx.filter = 'none';
     ctx.restore();
 
