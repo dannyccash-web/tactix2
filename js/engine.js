@@ -44,7 +44,16 @@ const TactixEngine = (() => {
     { key: 'bg1', src: 'assets/backgrounds/tactix_background.png' },
     { key: 'bg2', src: 'assets/backgrounds/tactix_background_2.png' },
     // Logo
-    { key: 'logo', src: 'assets/logo/tactix_logo.png' }
+    { key: 'logo', src: 'assets/logo/tactix_logo.png' },
+    // UI icons
+    { key: 'icon_melee', src: 'assets/icons/melee_icon.svg' },
+    { key: 'icon_ctf', src: 'assets/icons/capture_the_flag_icon.svg' },
+    { key: 'icon_infantry', src: 'assets/icons/infantry_icon.svg' },
+    { key: 'icon_sniper', src: 'assets/icons/sniper_icon.svg' },
+    { key: 'icon_grenadier', src: 'assets/icons/grenaider_icon.svg' },
+    { key: 'icon_med_pack', src: 'assets/icons/med_pack_icon.svg' },
+    { key: 'icon_mine', src: 'assets/icons/mine_icon.svg' },
+    { key: 'icon_teleporter', src: 'assets/icons/teleporter_icon.svg' }
   ];
 
   const AUDIO_MANIFEST = [
