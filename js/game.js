@@ -701,17 +701,25 @@ const Game = (() => {
     const spriteImg = TactixEngine.getImage(unit.team.spriteKey);
     if (!spriteImg) return;
 
-    // Soldier sprite is 1024×1536 — a single full-body soldier
-    // Draw so feet are just below hex center, scaled to fit within 1.8× hex radius
-    const sw = Board.HEX_R * 1.8;    // display width
-    const sh = sw * (1536 / 1024);   // maintain aspect ratio → ~2.7 × HEX_R tall
-    const sx = x - sw / 2;
-    const sy = y - sh + Board.HEX_R * 0.7;  // feet sit near hex center
+    // Sprite: 1024×1536 full-body soldier facing RIGHT by default
+    // AI units (on the right side) are flipped horizontally to face LEFT
+    const sw = Board.R * 2.0;                     // display width
+    const sh = sw * (1536 / 1024);                // aspect ratio → tall
+    const sy = y - sh + Board.R * 0.6;            // feet near hex center
 
     ctx.save();
     ctx.globalAlpha = unit.stunned ? 0.5 : 1;
     if (unit.stunned) ctx.filter = 'brightness(2.2) saturate(0)';
-    ctx.drawImage(spriteImg, sx, sy, sw, sh);
+
+    if (unit.side === 'ai') {
+      // Flip horizontally: translate to center, scale(-1,1), then draw
+      ctx.translate(x, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(spriteImg, -sw / 2, sy, sw, sh);
+    } else {
+      ctx.drawImage(spriteImg, x - sw / 2, sy, sw, sh);
+    }
+
     ctx.filter = 'none';
     ctx.restore();
 
@@ -728,13 +736,13 @@ const Game = (() => {
       ctx.font = 'bold 14px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('⚑', x + Board.HEX_R * 0.6, y - Board.HEX_R * 1.1);
+      ctx.fillText('⚑', x + Board.R * 0.6, y - Board.R * 1.1);
       ctx.restore();
     }
 
     // Selected unit glow
     if (state.selectedUnit && state.selectedUnit.id === unit.id) {
-      Board.drawHexPath(ctx, x, y, Board.HEX_R * 0.92);
+      Board.drawHexPath(ctx, x, y, Board.R * 0.92);
       ctx.strokeStyle = unit.team.color || '#ffff80';
       ctx.lineWidth = 2.5;
       ctx.stroke();
@@ -742,10 +750,10 @@ const Game = (() => {
   }
 
   function drawHPBar(ctx, cx, cy, unit) {
-    const w = Board.HEX_R * 1.4;
+    const w = Board.R * 1.4;
     const h = 4;
     const x = cx - w / 2;
-    const y = cy + Board.HEX_R * 0.7;
+    const y = cy + Board.R * 0.7;
 
     ctx.fillStyle = 'rgba(0,0,0,0.7)';
     ctx.fillRect(x, y, w, h);
@@ -761,8 +769,8 @@ const Game = (() => {
     if (unit.poisoned) icons.push({ color: '#60ee60', label: 'P' });
     if (unit.onFire)   icons.push({ color: '#ff8030', label: 'F' });
     icons.forEach((ic, i) => {
-      const x = cx - Board.HEX_R * 0.5 + i * 12;
-      const y = cy - Board.HEX_R * 1.0;
+      const x = cx - Board.R * 0.5 + i * 12;
+      const y = cy - Board.R * 1.0;
       ctx.fillStyle = ic.color;
       ctx.font = 'bold 9px sans-serif';
       ctx.textAlign = 'center';
