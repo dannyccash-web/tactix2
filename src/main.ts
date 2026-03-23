@@ -1,11 +1,11 @@
 (() => {
   const GAME_W = 1280;
   const GAME_H = 720;
-  const BOARD_W = 840;
-  const BOARD_H = 620;
-  const BOARD_ORIGIN_X = 28;
-  const BOARD_ORIGIN_Y = 50;
-  const HEX_SIZE = 21;
+  const BOARD_W = 940;
+  const BOARD_H = 430;
+  const BOARD_ORIGIN_X = 84;
+  const BOARD_ORIGIN_Y = 128;
+  const HEX_SIZE = 26;
   const COLS = 20;
   const ROWS = 10;
   const POINT_BUDGET = 15;
@@ -119,10 +119,12 @@
   }
 
   function hexToPixel(col, row) {
-    const width = Math.sqrt(3) * HEX_SIZE;
-    const height = HEX_SIZE * 2;
-    const x = BOARD_ORIGIN_X + col * width + (row % 2 ? 0 : 0); // placeholder for readability
-    const y = BOARD_ORIGIN_Y + row * (height * 0.75) + (col % 2 ? height * 0.375 : 0);
+    const xStep = Math.sqrt(3) * HEX_SIZE * 0.9;
+    const rowShear = HEX_SIZE * 0.82;
+    const yStep = HEX_SIZE * 1.08;
+    const yOffset = HEX_SIZE * 0.52;
+    const x = BOARD_ORIGIN_X + col * xStep + row * rowShear;
+    const y = BOARD_ORIGIN_Y + row * yStep + (col % 2 ? yOffset : 0);
     return { x, y };
   }
 
@@ -186,18 +188,18 @@
   }
 
   function createButton(scene, x, y, w, h, label, onClick, opts = {}) {
-    const bg = scene.add.rectangle(x, y, w, h, opts.fill || 0x121c2f, opts.alpha ?? 0.92)
-      .setStrokeStyle(2, opts.stroke || 0x6aa9ff)
+    const bg = scene.add.rectangle(x, y, w, h, opts.fill || 0x1b222b, opts.alpha ?? 0.95)
+      .setStrokeStyle(opts.lineWidth || 2, opts.stroke || 0xa8b7c1, 0.95)
       .setInteractive({ useHandCursor: true });
     const text = scene.add.text(x, y, label, {
-      fontFamily: opts.font || 'Roboto Mono',
-      fontSize: opts.size || '22px',
+      fontFamily: opts.font || 'Iceberg',
+      fontSize: opts.size || '26px',
       color: opts.color || '#f6fbff',
       align: 'center',
       wordWrap: { width: w - 20 }
     }).setOrigin(0.5);
-    bg.on('pointerover', () => bg.setFillStyle(opts.hoverFill || 0x1c2a44));
-    bg.on('pointerout', () => bg.setFillStyle(opts.fill || 0x121c2f, opts.alpha ?? 0.92));
+    bg.on('pointerover', () => bg.setFillStyle(opts.hoverFill || 0x2a333e, opts.alpha ?? 0.95));
+    bg.on('pointerout', () => bg.setFillStyle(opts.fill || 0x1b222b, opts.alpha ?? 0.95));
     bg.on('pointerdown', onClick);
     return { bg, text };
   }
@@ -218,6 +220,10 @@
       this.load.image('soldier_phlox', 'assets/Soldiers/phlox-soldier.png');
       this.load.image('soldier_virent', 'assets/Soldiers/virent-soldier.png');
       this.load.image('soldier_magma', 'assets/Soldiers/magma_soldier.png');
+      this.load.image('tile_dirt', 'assets/Tiles/dirt_texture_hex.png');
+      this.load.image('tile_rock', 'assets/Tiles/rock_texture_hex.png');
+      this.load.image('tile_acid', 'assets/Tiles/acid_texture_hex.png');
+      this.load.image('tile_fire', 'assets/Tiles/fire_texture_hex.png');
       this.load.audio('music_theme', 'assets/Music/tactix_score.mp3');
       this.load.audio('music_win', 'assets/Music/tactix_win.mp3');
       this.load.audio('music_loss', 'assets/Music/tactix_loss.mp3');
@@ -232,8 +238,18 @@
   class BaseMenuScene extends Phaser.Scene {
     addBackdrop(texture = 'bg1') {
       this.add.image(GAME_W / 2, GAME_H / 2, texture).setDisplaySize(GAME_W, GAME_H);
-      this.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0x04070d, 0.72);
-      this.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W - 30, GAME_H - 30, 0x000000, 0).setStrokeStyle(2, 0x4f88ff, 0.35);
+      this.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0x04070d, 0.54);
+      this.add.rectangle(GAME_W / 2, 28, GAME_W, 56, 0x000000, 0.34);
+      this.add.rectangle(GAME_W / 2, GAME_H - 22, GAME_W, 44, 0x000000, 0.30);
+    }
+    addScreenLabel(label, title, subtitle = '') {
+      this.add.text(46, 30, label, { fontFamily: 'Roboto Mono', fontSize: '18px', color: '#d2dee8' });
+      this.add.text(GAME_W / 2, 84, title, { fontFamily: 'Iceberg', fontSize: '54px', color: '#ffffff' }).setOrigin(0.5);
+      if (subtitle) this.add.text(GAME_W / 2, 126, subtitle, { fontFamily: 'Roboto Mono', fontSize: '18px', color: '#d6e4ef' }).setOrigin(0.5);
+    }
+    addMenuFooter(backTarget) {
+      createButton(this, 90, GAME_H - 24, 100, 28, 'BACK', () => this.scene.start(backTarget), { font: 'Roboto Mono', size: '15px', fill: 0x1b222b, hoverFill: 0x2a333e });
+      this.add.text(148, GAME_H - 24, 'MENU', { fontFamily: 'Roboto Mono', fontSize: '15px', color: '#d2dee8' }).setOrigin(0, 0.5);
     }
     ensureTheme() {
       if (!window.__tactixTheme || !window.__tactixTheme.isPlaying) {
@@ -258,28 +274,20 @@
     create() {
       this.addBackdrop('bg1');
       this.stopResultMusic();
-      const logo = this.add.image(GAME_W / 2, 170, 'logo').setScale(0.4);
-      this.add.text(GAME_W / 2, 310, 'TACTIX 2', {
-        fontFamily: 'Iceberg', fontSize: '72px', color: '#eef6ff', stroke: '#5db8ff', strokeThickness: 2
-      }).setOrigin(0.5);
-      this.add.text(GAME_W / 2, 370, 'GROUND-UP PHASER PROTOTYPE', {
-        fontFamily: 'Roboto Mono', fontSize: '24px', color: '#9ed1ff', letterSpacing: 2
-      }).setOrigin(0.5);
-      this.add.text(GAME_W / 2, 440, 'Turn-based hex tactics • browser-first • Steam-ready foundation', {
-        fontFamily: 'Roboto Mono', fontSize: '20px', color: '#ffffff'
+      this.add.text(54, 32, 'START SCREEN', { fontFamily: 'Roboto Mono', fontSize: '18px', color: '#d2dee8' });
+      this.add.image(GAME_W / 2, 198, 'logo').setScale(0.42);
+      this.add.text(GAME_W / 2, 354, 'TURN-BASED COMBAT', {
+        fontFamily: 'Roboto Mono', fontSize: '26px', color: '#f0f6fb', letterSpacing: 2
       }).setOrigin(0.5);
       if (state.lastResult) {
-        this.add.text(GAME_W / 2, 490, `Last result: ${state.lastResult}   W:${state.wins}  L:${state.losses}`, {
-          fontFamily: 'Roboto Mono', fontSize: '18px', color: '#ffd88b'
+        this.add.text(GAME_W / 2, 408, `LAST RESULT: ${state.lastResult}   W:${state.wins}  L:${state.losses}`, {
+          fontFamily: 'Roboto Mono', fontSize: '16px', color: '#f7cf89', align: 'center', wordWrap: { width: 900 }
         }).setOrigin(0.5);
       }
-      createButton(this, GAME_W / 2, 585, 260, 68, 'START', () => {
+      createButton(this, GAME_W / 2, 520, 256, 68, 'START', () => {
         this.ensureTheme();
         this.scene.start('ModeSelect');
-      }, { font: 'Iceberg', size: '36px', fill: 0x0e2340, hoverFill: 0x16345d, stroke: 0x5db8ff });
-      this.add.text(GAME_W / 2, 660, 'Best viewed in a local web server. Click units, tiles, and roster items to play.', {
-        fontFamily: 'Roboto Mono', fontSize: '14px', color: '#afc7df'
-      }).setOrigin(0.5);
+      }, { size: '34px' });
     }
   }
 
@@ -287,27 +295,22 @@
     constructor() { super('ModeSelect'); }
     create() {
       this.addBackdrop('bg2');
-      this.add.text(80, 60, 'SELECT GAME MODE', { fontFamily: 'Iceberg', fontSize: '48px', color: '#ffffff' });
-      this.add.text(80, 115, 'Both modes use the same squad builder, movement rules, and combat flow.', {
-        fontFamily: 'Roboto Mono', fontSize: '18px', color: '#cde2f8'
-      });
-      this.drawModeCard(360, 'Melee', 'Classic elimination mode. Destroy all enemy units to win.', () => {
+      this.addScreenLabel('GAME SELECT SCREEN', 'CHOOSE YOUR GAME', 'SELECT YOUR TEAM');
+      this.drawModeCard(435, 'MELEE', 'Original mode', () => {
         state.mode = 'Melee';
         this.scene.start('TeamSelect');
       });
-      this.drawModeCard(760, 'Capture the Flag', 'Seize the neutral flag and carry it into your base, or wipe out the enemy.', () => {
+      this.drawModeCard(845, 'CAPTURE THE FLAG', 'Grab the flag & return it', () => {
         state.mode = 'Capture the Flag';
         this.scene.start('TeamSelect');
       });
-      createButton(this, 120, 665, 160, 46, 'BACK', () => this.scene.start('Title'), { size: '22px' });
+      this.addMenuFooter('Title');
     }
     drawModeCard(x, title, desc, onClick) {
-      this.add.rectangle(x, 390, 320, 340, 0x0a1222, 0.9).setStrokeStyle(2, 0x6aa9ff, 0.8);
-      this.add.text(x, 275, title.toUpperCase(), { fontFamily: 'Iceberg', fontSize: '42px', color: '#ffffff', align: 'center' }).setOrigin(0.5);
-      this.add.text(x, 365, desc, {
-        fontFamily: 'Roboto Mono', fontSize: '18px', color: '#d8ecff', align: 'center', wordWrap: { width: 250 }
-      }).setOrigin(0.5);
-      createButton(this, x, 500, 200, 58, 'CHOOSE', onClick, { font: 'Iceberg', size: '28px', fill: 0x173153 });
+      this.add.rectangle(x, 390, 320, 220, 0x1b222b, 0.94).setStrokeStyle(2, 0xa8b7c1, 0.95);
+      this.add.text(x, 350, title, { fontFamily: 'Iceberg', fontSize: title.length > 10 ? '34px' : '42px', color: '#ffffff', align: 'center', wordWrap: { width: 280 } }).setOrigin(0.5);
+      this.add.text(x, 422, desc, { fontFamily: 'Roboto Mono', fontSize: '18px', color: '#d5e2eb', align: 'center', wordWrap: { width: 270 } }).setOrigin(0.5);
+      createButton(this, x, 492, 192, 42, 'SELECT', onClick, { font: 'Roboto Mono', size: '18px' });
     }
   }
 
@@ -315,30 +318,27 @@
     constructor() { super('TeamSelect'); }
     create() {
       this.addBackdrop('bg1');
-      this.add.text(70, 50, `SELECT TEAM • ${state.mode.toUpperCase()}`, { fontFamily: 'Iceberg', fontSize: '46px', color: '#ffffff' });
-      this.add.text(70, 104, 'Each team uses a distinct special unit and combat identity.', {
-        fontFamily: 'Roboto Mono', fontSize: '18px', color: '#cde2f8'
-      });
+      this.addScreenLabel('TEAM SELECT SCREEN', 'SELECT YOUR TEAM', 'On hover, the outline gets brighter and the badge glows.');
       const teams = Object.keys(TEAM_DATA);
-      teams.forEach((team, idx) => this.drawTeamCard(team, 150 + idx * 225, idx));
-      createButton(this, 110, 665, 160, 46, 'BACK', () => this.scene.start('ModeSelect'), { size: '22px' });
-    }
-    drawTeamCard(team, x, idx) {
-      const data = TEAM_DATA[team];
-      const card = this.add.rectangle(x, 380, 190, 520, 0x0b1220, 0.88).setStrokeStyle(2, data.color, 0.9).setInteractive({ useHandCursor: true });
-      this.add.image(x, 220, data.portrait).setScale(0.18);
-      this.add.text(x, 425, team.toUpperCase(), { fontFamily: 'Iceberg', fontSize: '30px', color: data.uiColor, align: 'center' }).setOrigin(0.5);
-      this.add.text(x, 458, data.tag, { fontFamily: 'Roboto Mono', fontSize: '15px', color: '#ffffff', align: 'center' }).setOrigin(0.5);
-      this.add.text(x, 515, `Roster:\n${data.units.join('\n')}`, {
-        fontFamily: 'Roboto Mono', fontSize: '16px', color: '#d9ecff', align: 'center'
-      }).setOrigin(0.5);
-      this.add.text(x, 620, data.powerText, {
-        fontFamily: 'Roboto Mono', fontSize: '13px', color: '#aac5df', align: 'center', wordWrap: { width: 155 }
-      }).setOrigin(0.5);
-      card.on('pointerdown', () => {
-        state.playerTeam = team;
-        this.scene.start('SquadBuilder');
+      teams.forEach((team, idx) => {
+        const row = idx < 3 ? 0 : 1;
+        const col = row === 0 ? idx : idx - 3;
+        const x = row === 0 ? 270 + col * 270 : 405 + col * 270;
+        const y = row === 0 ? 322 : 540;
+        this.drawTeamBadge(team, x, y);
       });
+      this.addMenuFooter('ModeSelect');
+    }
+    drawTeamBadge(team, x, y) {
+      const data = TEAM_DATA[team];
+      const glow = this.add.circle(x, y, 84, data.color, 0.0);
+      const frame = this.add.polygon(x, y, hexPolyPoints(92).flatMap(p => [p.x, p.y]), 0x1b222b, 0.95).setStrokeStyle(2, 0xa8b7c1, 0.95);
+      const portrait = this.add.image(x, y - 8, data.portrait).setScale(0.12);
+      const title = this.add.text(x, y + 72, team.toUpperCase(), { fontFamily: 'Iceberg', fontSize: '24px', color: '#ffffff' }).setOrigin(0.5);
+      frame.setInteractive(new Phaser.Geom.Polygon(hexPolyPoints(92).map(p => ({ x: p.x + x, y: p.y + y }))), Phaser.Geom.Polygon.Contains);
+      frame.on('pointerover', () => { glow.setAlpha(0.18); frame.setStrokeStyle(3, data.color, 1); title.setColor(data.uiColor); });
+      frame.on('pointerout', () => { glow.setAlpha(0.0); frame.setStrokeStyle(2, 0xa8b7c1, 0.95); title.setColor('#ffffff'); });
+      frame.on('pointerdown', () => { state.playerTeam = team; this.scene.start('SquadBuilder'); });
     }
   }
 
@@ -349,46 +349,42 @@
       this.roster = [];
       this.powerups = [];
       this.pointsSpent = 0;
-      this.selectedInfo = null;
-      this.add.text(60, 38, 'BUILD YOUR SQUAD', { fontFamily: 'Iceberg', fontSize: '50px', color: '#ffffff' });
-      this.add.text(60, 90, `${state.playerTeam} • ${state.mode}`, { fontFamily: 'Roboto Mono', fontSize: '20px', color: TEAM_DATA[state.playerTeam].uiColor });
-      this.add.rectangle(240, 390, 360, 530, 0x091221, 0.88).setStrokeStyle(2, TEAM_DATA[state.playerTeam].color, 0.8);
-      this.add.rectangle(680, 390, 420, 530, 0x091221, 0.88).setStrokeStyle(2, 0x6aa9ff, 0.8);
-      this.add.rectangle(1080, 390, 320, 530, 0x091221, 0.88).setStrokeStyle(2, 0xffd07a, 0.8);
-      this.add.text(95, 140, 'UNITS', { fontFamily: 'Iceberg', fontSize: '34px', color: '#ffffff' });
-      this.add.text(505, 140, 'POWER-UPS', { fontFamily: 'Iceberg', fontSize: '34px', color: '#ffffff' });
-      this.add.text(953, 140, 'CURRENT LOADOUT', { fontFamily: 'Iceberg', fontSize: '34px', color: '#ffffff' });
-      TEAM_DATA[state.playerTeam].units.forEach((name, idx) => this.drawUnitOption(name, 120, 200 + idx * 155));
-      Object.keys(POWERUP_DATA).forEach((name, idx) => this.drawPowerOption(name, 540, 210 + idx * 135));
-      this.summaryText = this.add.text(935, 190, '', { fontFamily: 'Roboto Mono', fontSize: '17px', color: '#f4f8ff', wordWrap: { width: 280 } });
-      this.infoText = this.add.text(935, 510, '', { fontFamily: 'Roboto Mono', fontSize: '15px', color: '#b7d0ea', wordWrap: { width: 280 } });
-      createButton(this, 120, 665, 160, 46, 'BACK', () => this.scene.start('TeamSelect'), { size: '22px' });
-      createButton(this, 1120, 665, 220, 54, 'READY', () => this.tryStartBattle(), { font: 'Iceberg', size: '28px', fill: 0x173153 });
+      this.addScreenLabel('BUILD YOUR SQUAD SCREEN', 'BUILD YOUR SQUAD', `Click + to add, - to remove. ${state.playerTeam} • ${state.mode}`);
+      this.add.rectangle(225, 410, 320, 500, 0x1b222b, 0.95).setStrokeStyle(2, 0xa8b7c1, 0.95);
+      this.add.rectangle(625, 410, 280, 500, 0x1b222b, 0.95).setStrokeStyle(2, 0xa8b7c1, 0.95);
+      this.add.rectangle(1030, 410, 410, 500, 0x1b222b, 0.95).setStrokeStyle(2, 0xa8b7c1, 0.95);
+      this.add.text(90, 164, 'SOLDIERS', { fontFamily: 'Iceberg', fontSize: '38px', color: '#ffffff' });
+      this.add.text(505, 164, 'POWER UPS', { fontFamily: 'Iceberg', fontSize: '38px', color: '#ffffff' });
+      this.summaryTitle = this.add.text(845, 164, 'YOUR SQUAD 0/15 PTS.', { fontFamily: 'Iceberg', fontSize: '34px', color: '#ffffff' });
+      TEAM_DATA[state.playerTeam].units.forEach((name, idx) => this.drawUnitOption(name, 92, 208 + idx * 130));
+      Object.keys(POWERUP_DATA).forEach((name, idx) => this.drawPowerOption(name, 502, 208 + idx * 130));
+      this.summaryText = this.add.text(846, 216, '', { fontFamily: 'Roboto Mono', fontSize: '18px', color: '#f4f8ff', lineSpacing: 8, wordWrap: { width: 355 } });
+      this.infoText = this.add.text(846, 560, '', { fontFamily: 'Roboto Mono', fontSize: '15px', color: '#b7d0ea', wordWrap: { width: 355 } });
+      this.addMenuFooter('TeamSelect');
+      createButton(this, 1106, GAME_H - 24, 128, 28, 'READY', () => this.tryStartBattle(), { font: 'Roboto Mono', size: '15px' });
       this.refreshSummary();
     }
     drawUnitOption(name, x, y) {
       const data = UNIT_DATA[name];
-      const card = this.add.rectangle(x + 100, y + 45, 290, 110, 0x11203a, 0.9).setStrokeStyle(2, TEAM_DATA[state.playerTeam].color, 0.6).setInteractive({ useHandCursor: true });
-      this.add.text(x, y, `${name}  (${data.cost})`, { fontFamily: 'Iceberg', fontSize: '28px', color: '#ffffff' });
-      this.add.text(x, y + 34, `SPD ${data.speed}  RNG ${data.range}  ATK +${data.atk}  DEF +${data.def}  DMG ${data.dmg}  HP ${data.hp}`, {
-        fontFamily: 'Roboto Mono', fontSize: '14px', color: '#d8e9ff'
-      });
-      this.add.text(x, y + 60, data.desc, { fontFamily: 'Roboto Mono', fontSize: '14px', color: '#aac5df', wordWrap: { width: 260 } });
-      card.on('pointerdown', () => this.addUnit(name));
+      this.add.text(x, y, `${name.toUpperCase()} ${data.cost}pts.`, { fontFamily: 'Iceberg', fontSize: '26px', color: '#ffffff' });
+      this.add.text(x, y + 30, `SPEED ${data.speed} • RANGE ${data.range} • ATTACK +${data.atk} • DEFENSE +${data.def}`,
+        { fontFamily: 'Roboto Mono', fontSize: '13px', color: '#d6e4ef' });
+      this.add.text(x, y + 48, `HIT POINTS ${data.hp} • DAMAGE ${data.dmg}`,
+        { fontFamily: 'Roboto Mono', fontSize: '13px', color: '#d6e4ef' });
+      if (data.desc) this.add.text(x, y + 69, data.desc.toUpperCase(), { fontFamily: 'Roboto Mono', fontSize: '12px', color: '#95aaba', wordWrap: { width: 190 } });
+      createButton(this, 362, y + 25, 34, 34, '+', () => this.addUnit(name), { font: 'Roboto Mono', size: '20px' });
     }
     drawPowerOption(name, x, y) {
       const data = POWERUP_DATA[name];
-      const card = this.add.rectangle(x + 100, y + 38, 340, 95, 0x11203a, 0.9).setStrokeStyle(2, 0xffd07a, 0.8).setInteractive({ useHandCursor: true });
-      this.add.text(x, y, `${name}  (${data.cost})`, { fontFamily: 'Iceberg', fontSize: '26px', color: '#ffe19f' });
-      this.add.text(x, y + 34, data.desc, { fontFamily: 'Roboto Mono', fontSize: '14px', color: '#d8e9ff', wordWrap: { width: 300 } });
-      card.on('pointerdown', () => this.addPowerup(name));
+      this.add.text(x, y, `${name.toUpperCase()} ${data.cost}pts.`, { fontFamily: 'Iceberg', fontSize: '24px', color: '#ffffff' });
+      this.add.text(x, y + 34, data.desc.toUpperCase(), { fontFamily: 'Roboto Mono', fontSize: '13px', color: '#d6e4ef', wordWrap: { width: 170 } });
+      createButton(this, 732, y + 25, 34, 34, '+', () => this.addPowerup(name), { font: 'Roboto Mono', size: '20px' });
     }
     addUnit(name) {
       const cost = UNIT_DATA[name].cost;
       if (this.pointsSpent + cost > POINT_BUDGET) return this.flashInfo('Not enough points for that unit.');
       this.roster.push(name);
       this.pointsSpent += cost;
-      this.infoText.setText(`${name} added.`);
       this.refreshSummary();
     }
     addPowerup(name) {
@@ -397,28 +393,44 @@
       if (this.pointsSpent + cost > POINT_BUDGET) return this.flashInfo('Not enough points for that power-up.');
       this.powerups.push(name);
       this.pointsSpent += cost;
-      this.infoText.setText(`${name} added.`);
+      this.refreshSummary();
+    }
+    removeEntry(listName, idx) {
+      if (listName === 'unit') {
+        const name = this.roster[idx];
+        this.pointsSpent -= UNIT_DATA[name].cost;
+        this.roster.splice(idx, 1);
+      } else {
+        const name = this.powerups[idx];
+        this.pointsSpent -= POWERUP_DATA[name].cost;
+        this.powerups.splice(idx, 1);
+      }
       this.refreshSummary();
     }
     refreshSummary() {
-      const unitLines = this.roster.length ? this.roster.map((u, i) => `${i + 1}. ${u}`) : ['No units selected'];
-      const powerLines = this.powerups.length ? this.powerups.map((u, i) => `${i + 1}. ${u}`) : ['No power-ups selected'];
-      this.summaryText.setText([
-        `Points: ${this.pointsSpent}/${POINT_BUDGET}`,
-        '',
-        'Units:',
-        ...unitLines,
-        '',
-        `Power-ups (${this.powerups.length}/${MAX_POWERUPS}):`,
-        ...powerLines,
-        '',
-        'Click unit or power-up cards to add them.',
-        'Press READY when you have at least one unit.'
-      ]);
+      this.summaryTitle.setText(`YOUR SQUAD ${this.pointsSpent}/${POINT_BUDGET} PTS.`);
+      (this.summaryRemovers || []).forEach(c => c.destroy && c.destroy());
+      this.summaryRemovers = [];
+      let lines = [];
+      let y = 252;
+      this.roster.forEach((u, i) => {
+        lines.push(u.toUpperCase());
+        const btn = createButton(this, 1208, y + i * 26, 24, 22, '-', () => this.removeEntry('unit', i), { font: 'Roboto Mono', size: '14px' });
+        this.summaryRemovers.push(btn.bg, btn.text);
+      });
+      const powerBase = y + Math.max(0, this.roster.length * 26 + 18);
+      this.powerups.forEach((p, i) => {
+        lines.push(p.toUpperCase());
+        const btn = createButton(this, 1208, powerBase + i * 26, 24, 22, '-', () => this.removeEntry('power', i), { font: 'Roboto Mono', size: '14px' });
+        this.summaryRemovers.push(btn.bg, btn.text);
+      });
+      if (!lines.length) lines = ['NO UNITS SELECTED'];
+      this.summaryText.setText(lines.join('\n'));
+      this.infoText.setText('Click READY when you have at least one soldier.');
     }
     flashInfo(msg) {
       this.infoText.setText(msg);
-      this.tweens.add({ targets: this.infoText, alpha: 0.4, yoyo: true, duration: 120, repeat: 1 });
+      this.tweens.add({ targets: this.infoText, alpha: 0.45, yoyo: true, duration: 110, repeat: 1 });
     }
     tryStartBattle() {
       if (!this.roster.length) return this.flashInfo('Choose at least one unit.');
@@ -432,7 +444,9 @@
     constructor() { super('Battle'); }
     create() {
       this.add.image(GAME_W / 2, GAME_H / 2, 'bg1').setDisplaySize(GAME_W, GAME_H);
-      this.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0x041018, 0.78);
+      this.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0x05080d, 0.40);
+      this.add.rectangle(GAME_W / 2, 28, GAME_W, 56, 0x000000, 0.36);
+      this.add.rectangle(GAME_W / 2, GAME_H - 22, GAME_W, 44, 0x000000, 0.34);
       this.board = [];
       this.hexMap = new Map();
       this.units = [];
@@ -448,17 +462,17 @@
       this.pendingAction = null;
       this.logLines = [];
       this.aiTurnRunning = false;
-      this.infoBanner = this.add.text(20, 12, '', { fontFamily: 'Roboto Mono', fontSize: '17px', color: '#ffffff' });
-      this.logText = this.add.text(870, 390, '', { fontFamily: 'Roboto Mono', fontSize: '14px', color: '#d8e9ff', wordWrap: { width: 390 } });
-      this.sideText = this.add.text(870, 20, '', { fontFamily: 'Iceberg', fontSize: '34px', color: '#ffffff' });
-      this.modeText = this.add.text(870, 60, '', { fontFamily: 'Roboto Mono', fontSize: '16px', color: '#cde2f8' });
-      this.turnText = this.add.text(870, 90, '', { fontFamily: 'Roboto Mono', fontSize: '18px', color: '#ffd07a' });
-      this.objectiveText = this.add.text(870, 122, '', { fontFamily: 'Roboto Mono', fontSize: '15px', color: '#b8d6f2', wordWrap: { width: 370 } });
-      this.selectedText = this.add.text(870, 165, '', { fontFamily: 'Roboto Mono', fontSize: '15px', color: '#f4f8ff', wordWrap: { width: 370 } });
-      this.panelBg = this.add.rectangle(1065, 530, 390, 340, 0x091221, 0.92).setStrokeStyle(2, 0x6aa9ff, 0.7);
-      this.rosterPanelTitle = this.add.text(875, 222, 'TACTICAL PANEL', { fontFamily: 'Iceberg', fontSize: '30px', color: '#ffffff' });
-      this.powerupTitle = this.add.text(875, 262, 'Power-ups', { fontFamily: 'Roboto Mono', fontSize: '18px', color: '#ffe19f' });
+      this.modeText = this.add.text(24, 22, '', { fontFamily: 'Roboto Mono', fontSize: '18px', color: '#ffffff' });
+      this.sideText = this.add.text(908, 44, 'GAMEPLAY SCREEN', { fontFamily: 'Roboto Mono', fontSize: '16px', color: '#d5e2eb' });
+      this.logText = this.add.text(908, 84, '', { fontFamily: 'Roboto Mono', fontSize: '13px', color: '#d8e9ff', wordWrap: { width: 328 }, lineSpacing: 3 });
+      this.turnText = this.add.text(908, 420, '', { fontFamily: 'Roboto Mono', fontSize: '16px', color: '#ffd07a' });
+      this.objectiveText = this.add.text(908, 452, '', { fontFamily: 'Roboto Mono', fontSize: '14px', color: '#d6e4ef', wordWrap: { width: 328 } });
+      this.selectedText = this.add.text(908, 528, '', { fontFamily: 'Roboto Mono', fontSize: '14px', color: '#f4f8ff', wordWrap: { width: 328 }, lineSpacing: 3 });
+      this.panelBg = this.add.rectangle(1084, 346, 356, 520, 0x1b222b, 0.92).setStrokeStyle(2, 0xa8b7c1, 0.95);
+      this.powerupTitle = this.add.text(96, GAME_H - 24, 'POWER UPS', { fontFamily: 'Roboto Mono', fontSize: '16px', color: '#d5e2eb' });
+      this.enemyPowerupTitle = this.add.text(1184, GAME_H - 24, 'ENEMY POWER UPS', { fontFamily: 'Roboto Mono', fontSize: '16px', color: '#d5e2eb' }).setOrigin(1, 0.5);
       this.powerupButtons = [];
+      this.enemyPowerupTexts = [];
       this.baseTiles = { player: new Set(['0,0','0,1','1,0']), ai: new Set([`${COLS-1},${ROWS-1}`, `${COLS-1},${ROWS-2}`, `${COLS-2},${ROWS-1}`]) };
 
       this.drawBoard();
@@ -477,18 +491,18 @@
       for (let col = 0; col < COLS; col++) {
         for (let row = 0; row < ROWS; row++) {
           const { x, y } = hexToPixel(col, row);
-          const g = this.add.graphics({ x, y });
-          g.fillStyle(0x10253a, 0.92);
-          g.lineStyle(2, 0x45729b, 0.48);
-          g.beginPath();
-          g.moveTo(points[0].x, points[0].y);
-          for (let i = 1; i < points.length; i++) g.lineTo(points[i].x, points[i].y);
-          g.closePath();
-          g.fillPath();
-          g.strokePath();
+          const base = this.add.image(x, y, 'tile_dirt').setScale(0.36).setAlpha(0.95).setAngle(randInt(-20, 20));
+          const overlay = this.add.graphics({ x, y });
+          const outline = this.add.graphics({ x, y });
+          outline.lineStyle(2, 0x61767f, 0.78);
+          outline.beginPath();
+          outline.moveTo(points[0].x, points[0].y);
+          for (let i = 1; i < points.length; i++) outline.lineTo(points[i].x, points[i].y);
+          outline.closePath();
+          outline.strokePath();
           const hit = new Phaser.Geom.Polygon(points.map(p => ({ x: p.x, y: p.y })));
-          const zone = this.add.zone(x, y, HEX_SIZE * 1.9, HEX_SIZE * 1.9).setInteractive(hit, Phaser.Geom.Polygon.Contains);
-          const tile = { col, row, x, y, graphics: g, zone, obstacle: false, marker: null };
+          const zone = this.add.zone(x, y, HEX_SIZE * 2.4, HEX_SIZE * 2.2).setInteractive(hit, Phaser.Geom.Polygon.Contains);
+          const tile = { col, row, x, y, base, overlay, outline, zone, obstacle: false, marker: null };
           zone.on('pointerdown', () => this.onTileClicked(tile));
           zone.on('pointerover', () => this.highlightHover(tile));
           zone.on('pointerout', () => this.clearHover(tile));
@@ -499,19 +513,26 @@
     }
 
     drawUiButtons() {
-      createButton(this, 930, 318, 140, 46, 'ATTACK PHASE', () => {
-        if (this.turnSide !== 'player' || this.phase !== 'move') return;
+      createButton(this, 68, 82, 88, 30, state.mode.toUpperCase() === 'CAPTURE THE FLAG' ? 'CTF' : 'MELEE', () => {}, { font: 'Roboto Mono', size: '14px' });
+      this.moveBtn = createButton(this, 166, 82, 84, 30, 'MOVE', () => {
+        if (this.turnSide !== 'player') return;
+        this.phase = 'move';
+        this.pendingAction = null;
+        this.updateUI();
+      }, { font: 'Roboto Mono', size: '14px' });
+      this.attackBtn = createButton(this, 264, 82, 96, 30, 'ATTACK', () => {
+        if (this.turnSide !== 'player') return;
         this.phase = 'attack';
         this.pendingAction = null;
         this.selectedUnit = null;
-        this.log('Player ended movement. Attack phase begins.');
+        this.log('Attack phase begins.');
         this.updateUI();
-      }, { size: '18px', fill: 0x173153 });
-      createButton(this, 1095, 318, 120, 46, 'END TURN', () => {
+      }, { font: 'Roboto Mono', size: '14px' });
+      createButton(this, 386, 82, 118, 30, 'BACK MENU', () => this.openInfoOverlay('roster'), { font: 'Roboto Mono', size: '14px' });
+      createButton(this, 506, 82, 102, 30, 'END TURN', () => {
         if (this.turnSide !== 'player' || this.aiTurnRunning) return;
         this.endPlayerTurn();
-      }, { size: '18px', fill: 0x173153 });
-      createButton(this, 1220, 318, 90, 46, 'QUIT', () => this.scene.start('Title'), { size: '18px', fill: 0x402028, hoverFill: 0x613241, stroke: 0xff8aa3 });
+      }, { font: 'Roboto Mono', size: '14px' });
     }
 
     generateObstacles() {
@@ -535,9 +556,10 @@
     }
 
     drawObstacle(tile) {
-      const rock = this.add.circle(tile.x, tile.y, HEX_SIZE * 0.7, 0x8290a5, 0.95).setStrokeStyle(2, 0x0a1220, 0.9);
-      const tag = this.add.text(tile.x, tile.y, 'X', { fontFamily: 'Roboto Mono', fontSize: '18px', color: '#101823' }).setOrigin(0.5);
-      tile.marker = this.add.container(0, 0, [rock, tag]);
+      if (tile.marker) tile.marker.destroy();
+      tile.base.setTexture('tile_rock');
+      tile.base.setAngle(randInt(-25, 25));
+      tile.marker = this.add.ellipse(tile.x, tile.y + 16, 32, 12, 0x000000, 0.18);
     }
 
     spawnTeams() {
@@ -562,11 +584,11 @@
       const stats = UNIT_DATA[unitName];
       const key = TEAM_DATA[team].sprite;
       const { x, y } = hexToPixel(col, row);
-      const shadow = this.add.ellipse(x, y + 26, 24, 10, 0x000000, 0.35);
-      const sprite = this.add.image(x, y + 2, key).setScale(0.08);
-      const hpBarBg = this.add.rectangle(x, y - 35, 38, 6, 0x000000, 0.7);
-      const hpBar = this.add.rectangle(x - 18, y - 35, 36, 4, side === 'player' ? 0x5df08f : 0xff7a76, 1).setOrigin(0, 0.5);
-      const label = this.add.text(x, y + 36, unitName, { fontFamily: 'Roboto Mono', fontSize: '11px', color: '#ffffff', align: 'center' }).setOrigin(0.5);
+      const shadow = this.add.ellipse(x, y + 28, 30, 12, 0x000000, 0.28);
+      const sprite = this.add.image(x, y + 4, key).setScale(0.072);
+      const hpBarBg = this.add.rectangle(x, y - 32, 44, 7, 0x000000, 0.78);
+      const hpBar = this.add.rectangle(x - 21, y - 32, 42, 5, side === 'player' ? 0x79f0a0 : 0xff8d88, 1).setOrigin(0, 0.5);
+      const label = this.add.text(x, y + 38, unitName, { fontFamily: 'Roboto Mono', fontSize: '10px', color: '#ffffff', align: 'center', backgroundColor: '#1b222b' }).setPadding(4,1,4,1).setOrigin(0.5);
       const hitArea = this.add.zone(x, y, 44, 70).setInteractive({ useHandCursor: true });
       const unit = {
         id: Phaser.Math.RND.uuid(), side, team, unitName, col, row,
@@ -575,6 +597,8 @@
         sprite, label, hpBar, hpBarBg, hitArea, shadow
       };
       hitArea.on('pointerdown', () => this.onUnitClicked(unit));
+      hitArea.on('pointerover', () => { if (!unit.alive) return; this.selectedText.setText([`${unit.unitName} • ${unit.team}`, `HP ${unit.hp}/${unit.maxHp}  SPD ${unit.speed}  RNG ${unit.range}`, `ATK +${unit.atk}  DEF +${unit.def}  DMG ${unit.dmg}`].join('\n')); });
+      hitArea.on('pointerout', () => this.updateUI());
       this.units.push(unit);
       this.setUnitMap(unit, col, row);
       return unit;
@@ -585,13 +609,13 @@
       unit.col = col; unit.row = row; unit.mapKey = `${col},${row}`;
       this.unitMap.set(unit.mapKey, unit);
       const { x, y } = hexToPixel(col, row);
-      unit.shadow.setPosition(x, y + 26);
-      unit.sprite.setPosition(x, y + 2);
-      unit.hpBarBg.setPosition(x, y - 35);
-      unit.hpBar.setPosition(x - 18, y - 35);
-      unit.label.setPosition(x, y + 36);
+      unit.shadow.setPosition(x, y + 28);
+      unit.sprite.setPosition(x, y + 4);
+      unit.hpBarBg.setPosition(x, y - 32);
+      unit.hpBar.setPosition(x - 21, y - 32);
+      unit.label.setPosition(x, y + 38);
       unit.hitArea.setPosition(x, y);
-      unit.hpBar.width = Math.max(0, (unit.hp / unit.maxHp) * 36);
+      unit.hpBar.width = Math.max(0, (unit.hp / unit.maxHp) * 42);
     }
 
     placeFlag() {
@@ -739,12 +763,13 @@
       const powerups = [...this.playerPowerups];
       const countMap = {};
       powerups.forEach(p => countMap[p] = (countMap[p] || 0) + 1);
-      Object.keys(countMap).forEach((name, idx) => {
-        const y = 290 + idx * 42;
-        const rect = this.add.rectangle(955, y, 150, 32, 0x173153, 0.95).setStrokeStyle(1, 0xffd07a, 0.7).setInteractive({ useHandCursor: true });
-        const text = this.add.text(880, y - 11, `${name} x${countMap[name]}`, { fontFamily: 'Roboto Mono', fontSize: '15px', color: '#ffe19f' });
+      let x = 190;
+      Object.keys(countMap).forEach((name) => {
+        const rect = this.add.rectangle(x, GAME_H - 52, 116, 28, 0x1b222b, 0.95).setStrokeStyle(1, 0xa8b7c1, 0.95).setInteractive({ useHandCursor: true });
+        const textObj = this.add.text(x, GAME_H - 52, `${name} x${countMap[name]}`, { fontFamily: 'Roboto Mono', fontSize: '13px', color: '#ffffff' }).setOrigin(0.5);
         rect.on('pointerdown', () => this.activatePowerup(name));
-        this.powerupButtons.push(rect, text);
+        this.powerupButtons.push(rect, textObj);
+        x += 126;
       });
     }
 
@@ -935,8 +960,7 @@
       const existing = this.hazards.get(key);
       if (existing) existing.sprite.destroy();
       const tile = this.hexMap.get(key);
-      const sprite = this.add.circle(tile.x, tile.y, 10, type === 'acid' ? 0x69ff8c : 0xff8f4b, 0.8);
-      sprite.setStrokeStyle(2, 0x0a1220, 0.85);
+      const sprite = this.add.image(tile.x, tile.y, type === 'acid' ? 'tile_acid' : 'tile_fire').setScale(0.26).setAlpha(0.9).setAngle(randInt(-15, 15));
       this.hazards.set(key, { type, damage, sprite });
     }
 
@@ -950,7 +974,7 @@
 
     updateUnitVisual(unit) {
       unit.hp = Math.max(0, unit.hp);
-      unit.hpBar.width = Math.max(0, (unit.hp / unit.maxHp) * 36);
+      unit.hpBar.width = Math.max(0, (unit.hp / unit.maxHp) * 42);
     }
 
     killUnit(unit, source, tag) {
@@ -988,36 +1012,42 @@
 
     highlightHover(tile) {
       if (tile.obstacle) return;
-      tile.graphics.clear();
-      this.drawTile(tile, 0x21486c, 0x8bc0ff);
+      this.redrawTile(tile, true);
     }
 
     clearHover(tile) {
-      this.redrawTile(tile);
+      this.redrawTile(tile, false);
     }
 
-    redrawTile(tile) {
-      tile.graphics.clear();
-      const key = `${tile.col},${tile.row}`;
-      let fill = 0x10253a;
-      let stroke = 0x45729b;
-      if (this.baseTiles.player.has(key)) fill = 0x163a2b;
-      if (this.baseTiles.ai.has(key)) fill = 0x432024;
-      if (this.selectedUnit && this.selectedUnit.col === tile.col && this.selectedUnit.row === tile.row) fill = 0x2f4d78;
-      this.drawTile(tile, fill, stroke);
-    }
-
-    drawTile(tile, fill, stroke) {
+    redrawTile(tile, hovered = false) {
+      tile.overlay.clear();
+      tile.outline.clear();
+      tile.outline.lineStyle(2, hovered ? 0xe7f0f7 : 0x61767f, hovered ? 1 : 0.78);
       const points = hexPolyPoints(HEX_SIZE);
-      tile.graphics.fillStyle(fill, 0.92);
-      tile.graphics.lineStyle(2, stroke, 0.62);
-      tile.graphics.beginPath();
-      tile.graphics.moveTo(points[0].x, points[0].y);
-      for (let i = 1; i < points.length; i++) tile.graphics.lineTo(points[i].x, points[i].y);
-      tile.graphics.closePath();
-      tile.graphics.fillPath();
-      tile.graphics.strokePath();
+      tile.outline.beginPath();
+      tile.outline.moveTo(points[0].x, points[0].y);
+      for (let i = 1; i < points.length; i++) tile.outline.lineTo(points[i].x, points[i].y);
+      tile.outline.closePath();
+      tile.outline.strokePath();
+      const key = `${tile.col},${tile.row}`;
+      let fillColor = null;
+      let alpha = 0;
+      tile.base.setTexture(tile.obstacle ? 'tile_rock' : 'tile_dirt');
+      if (this.baseTiles.player.has(key)) { fillColor = 0x4e7b62; alpha = 0.28; }
+      if (this.baseTiles.ai.has(key)) { fillColor = 0x8b4f54; alpha = 0.28; }
+      if (this.selectedUnit && this.selectedUnit.col === tile.col && this.selectedUnit.row === tile.row) { fillColor = 0xb0c3cf; alpha = 0.22; }
+      if (hovered) { fillColor = 0xf4f7fa; alpha = 0.15; }
+      if (fillColor !== null) {
+        tile.overlay.fillStyle(fillColor, alpha);
+        tile.overlay.beginPath();
+        tile.overlay.moveTo(points[0].x, points[0].y);
+        for (let i = 1; i < points.length; i++) tile.overlay.lineTo(points[i].x, points[i].y);
+        tile.overlay.closePath();
+        tile.overlay.fillPath();
+      }
     }
+
+    drawTile(tile, fill, stroke) {}
 
     endPlayerTurn() {
       if (this.turnSide !== 'player') return;
@@ -1140,7 +1170,8 @@
       if (win) state.wins++; else state.losses++;
       if (window.__tactixTheme && window.__tactixTheme.isPlaying) window.__tactixTheme.stop();
       this.sound.play(win ? 'music_win' : 'music_loss', { volume: 0.35 });
-      this.add.rectangle(GAME_W / 2, GAME_H / 2, 560, 220, 0x07111d, 0.96).setStrokeStyle(2, win ? 0x71ff9b : 0xff7d7d, 0.95);
+      this.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0x000000, 0.58);
+      this.add.rectangle(GAME_W / 2, GAME_H / 2, 560, 220, 0x1b222b, 0.97).setStrokeStyle(2, 0xa8b7c1, 0.95);
       this.add.text(GAME_W / 2, GAME_H / 2 - 50, win ? 'VICTORY' : 'DEFEAT', {
         fontFamily: 'Iceberg', fontSize: '72px', color: win ? '#9bffbb' : '#ffb1b1'
       }).setOrigin(0.5);
@@ -1156,10 +1187,31 @@
       this.logText.setText(this.logLines.join('\n'));
     }
 
+    openInfoOverlay(section = 'roster') {
+      if (this.menuOverlay) { this.menuOverlay.destroy(true); this.menuOverlay = null; }
+      const wrap = this.add.container(0, 0);
+      const dim = this.add.rectangle(GAME_W / 2, GAME_H / 2, GAME_W, GAME_H, 0x000000, 0.62).setInteractive();
+      const panel = this.add.rectangle(GAME_W / 2, GAME_H / 2, 640, 340, 0x1b222b, 0.97).setStrokeStyle(2, 0xa8b7c1, 0.95);
+      const title = this.add.text(GAME_W / 2, 220, 'OVERLAYS', { fontFamily: 'Iceberg', fontSize: '46px', color: '#ffffff' }).setOrigin(0.5);
+      const body = this.add.text(560, 292, '', { fontFamily: 'Roboto Mono', fontSize: '16px', color: '#f4f8ff', wordWrap: { width: 420 }, lineSpacing: 6 });
+      const setSection = (name) => {
+        if (name === 'roster') body.setText(['ROSTER', '', ...state.playerRoster.map((u, i) => `${i + 1}. ${u}`), '', `Power Ups: ${this.playerPowerups.join(', ') || 'None'}`]);
+        else if (name === 'settings') body.setText(`SETTINGS\n\nBrowser prototype view. Use a local web server, 1280x720 window, and mouse input.`);
+        else body.setText(`RULES\n\nMOVE to reposition units using the shared move pool. ATTACK to fire once per unit. END TURN hands control to the AI. Hover a unit to inspect its stats.`);
+      };
+      const makeTab = (x, name) => createButton(this, x, 270, 120, 34, name.toUpperCase(), () => setSection(name), { font: 'Roboto Mono', size: '14px' });
+      const t1 = makeTab(420, 'roster');
+      const t2 = makeTab(548, 'settings');
+      const t3 = makeTab(676, 'rules');
+      const close = createButton(this, 804, 270, 120, 34, 'CLOSE', () => { wrap.destroy(true); this.menuOverlay = null; }, { font: 'Roboto Mono', size: '14px' });
+      setSection(section);
+      wrap.add([dim, panel, title, body, t1.bg, t1.text, t2.bg, t2.text, t3.bg, t3.text, close.bg, close.text]);
+      this.menuOverlay = wrap;
+    }
+
     updateUI() {
-      this.sideText.setText(`${this.turnSide === 'player' ? 'PLAYER' : 'AI'} TURN`);
-      this.modeText.setText(`${state.mode} • ${state.playerTeam} vs ${this.aiTeam}`);
-      this.turnText.setText(`Phase: ${this.phase.toUpperCase()}   Move Pool: ${this.movePool}`);
+      this.modeText.setText(`${state.mode.toUpperCase()}    MOVE    ATTACK    BACK MENU    END TURN`);
+      this.turnText.setText(`Turn: ${this.turnSide === 'player' ? 'PLAYER' : 'AI'}   Phase: ${this.phase.toUpperCase()}   Move Pool: ${this.movePool}`);
       this.objectiveText.setText(state.mode === 'Melee'
         ? 'Objective: eliminate all enemy units.'
         : 'Objective: grab the neutral flag and return it to your base, or destroy all enemies.');
@@ -1175,15 +1227,25 @@
           `Status: ${u.poisoned ? 'Poisoned ' : ''}${u.burning ? 'Burning ' : ''}${u.carryingFlag ? 'Flag Carrier' : 'Ready'}`
         ].join('\n'));
       } else {
-        this.selectedText.setText('Select a friendly unit, then click a tile to move or an enemy to attack.');
+        this.selectedText.setText('Hovering over a unit shows a tooltip with their stats. Select a friendly unit, then click a tile to move or an enemy to attack.');
       }
       this.board.forEach(t => this.redrawTile(t));
+      this.enemyPowerupTexts.forEach(t => t.destroy());
+      this.enemyPowerupTexts = [];
+      const aiCounts = {};
+      this.aiPowerups.forEach(p => aiCounts[p] = (aiCounts[p] || 0) + 1);
+      let ex = 1176;
+      Object.keys(aiCounts).forEach(name => {
+        const t = this.add.text(ex, GAME_H - 52, `${name} x${aiCounts[name]}`, { fontFamily: 'Roboto Mono', fontSize: '13px', color: '#ffffff', backgroundColor: '#1b222b' }).setPadding(6,4,6,4).setOrigin(1,0.5);
+        this.enemyPowerupTexts.push(t);
+        ex -= t.width + 10;
+      });
       if (this.flag && this.flag.carrierId) {
         const carrier = this.units.find(u => u.id === this.flag.carrierId);
-        if (carrier && carrier.alive) {
-          this.flag.sprite.setPosition(carrier.sprite.x, carrier.sprite.y - 22).setVisible(true);
-        }
+        if (carrier && carrier.alive) this.flag.sprite.setPosition(carrier.sprite.x, carrier.sprite.y - 22).setVisible(true);
       }
+      this.moveBtn.bg.setFillStyle(this.phase === 'move' ? 0x58656f : 0x1b222b, 0.95);
+      this.attackBtn.bg.setFillStyle(this.phase === 'attack' ? 0x58656f : 0x1b222b, 0.95);
     }
   }
 
