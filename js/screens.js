@@ -47,7 +47,7 @@ const Screens = (() => {
       .phase-btn.active { background:rgba(255,255,255,.1); }
 
       .pu-icon {
-        width:42px; height:48px;
+        width:36px; height:42px;
         display:flex; align-items:center; justify-content:center;
         cursor:pointer; color:#90b8c8;
         background:transparent;
@@ -159,60 +159,6 @@ const Screens = (() => {
     }
 
 
-    function drawCombatPopup(ctx, data) {
-      const x = 380, y = 216, w = 520, h = 144;
-      ctx.save();
-      ctx.globalAlpha = Math.max(0, Math.min(1, data.timer / 0.18, 1));
-      ctx.fillStyle = 'rgba(3,11,18,.94)';
-      ctx.strokeStyle = data.hit ? '#58c878' : '#d86060';
-      ctx.lineWidth = 2;
-      ctx.fillRect(x, y, w, h);
-      ctx.strokeRect(x, y, w, h);
-      drawPopupPortrait(ctx, x + 72, y + 72, 42, data.attackerPortrait, data.attackerColor);
-      drawPopupPortrait(ctx, x + w - 72, y + 72, 42, data.defenderPortrait, data.defenderColor);
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.font = '18px Iceberg';
-      ctx.fillStyle = '#dfeaf1';
-      ctx.fillText('ATTACK', x + 170, y + 26);
-      ctx.fillText('DEFENSE', x + w - 170, y + 26);
-      ctx.font = '11px RobotoMono';
-      ctx.fillStyle = '#8fb0bf';
-      ctx.fillText(`d10 ${data.atkBase} + ${data.atkMod}`, x + 170, y + 54);
-      ctx.fillText(`d10 ${data.defBase} + ${data.defMod}`, x + w - 170, y + 54);
-      ctx.font = '32px Iceberg';
-      ctx.fillStyle = data.attackerColor;
-      ctx.fillText(String(data.atkTotal), x + 170, y + 92);
-      ctx.fillStyle = data.defenderColor;
-      ctx.fillText(String(data.defTotal), x + w - 170, y + 92);
-      ctx.font = '28px Iceberg';
-      ctx.fillStyle = data.hit ? '#58c878' : '#d86060';
-      ctx.fillText(data.hit ? 'HIT' : 'MISS', x + w/2, y + 74);
-      if (data.hit) {
-        ctx.font = '12px RobotoMono';
-        ctx.fillStyle = '#f0d34f';
-        ctx.fillText(`${data.damage} DMG`, x + w/2, y + 102);
-      }
-      ctx.restore();
-    }
-
-    function drawPopupPortrait(ctx, cx, cy, r, key, stroke) {
-      const img = E.getImage(key);
-      ctx.save();
-      hexPath6(ctx, cx, cy, r);
-      ctx.fillStyle = 'rgba(8,18,28,.74)';
-      ctx.fill();
-      ctx.strokeStyle = stroke; ctx.lineWidth = 2; ctx.stroke();
-      if (img) {
-        ctx.save();
-        hexPath6(ctx, cx, cy, r - 2);
-        ctx.clip();
-        const w = r * 2.2, h = w;
-        ctx.drawImage(img, cx - w / 2, cy - h * 0.58, w, h);
-        ctx.restore();
-      }
-      ctx.restore();
-    }
-
     return { enter, destroy, update, render };
   }
 
@@ -224,7 +170,7 @@ const Screens = (() => {
     let hovered = null;
     let selectedMode = null;
 
-    const MELEE_CX = 390, CTF_CX = 890, CARD_CY = 404, CARD_R = 138;
+    const MELEE_CX = 390, CTF_CX = 890, CARD_CY = 356, CARD_R = 138;
 
     function hitHex(mx, my, cx, cy, r) {
       return Math.hypot(mx - cx, my - cy) < r * 0.92;
@@ -288,18 +234,18 @@ const Screens = (() => {
       const icon = E.getImage(iconKey);
       if (icon) {
         const maxW = hot ? 154 : 146;
-        const maxH = hot ? 104 : 98;
+        const maxH = hot ? 112 : 106;
         const scale = Math.min(maxW / icon.width, maxH / icon.height);
-        const w = icon.width * scale;
-        const h = icon.height * scale;
-        ctx.drawImage(icon, cx - w / 2, cy - 44 - h / 2, w, h);
+        const w = Math.round(icon.width * scale);
+        const h = Math.round(icon.height * scale);
+        ctx.drawImage(icon, Math.round(cx - w / 2), Math.round(cy - h / 2), w, h);
       }
 
-      ctx.font = '20px Iceberg';
+      ctx.font = '26px Iceberg';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillStyle = hot ? '#fff' : '#c7d8e2';
-      ctx.fillText(label, cx, cy + 36);
+      ctx.fillText(label, cx, cy + r + 34);
       ctx.restore();
     }
 
@@ -450,11 +396,6 @@ const Screens = (() => {
       });
       title.textContent = 'BUILD YOUR SQUAD';
 
-      const pts = el('div', {
-        fontFamily:'RobotoMono,monospace', fontSize:'12px',
-        color: rem >= 0 ? '#f0d34f' : '#c84444', marginLeft:'auto'
-      });
-      pts.textContent = `${cost} / ${Data.SQUAD_BUDGET} PTS`;
 
       const backBtn = txBtn('BACK', () => E.setScreen(TeamSelect(mode)));
       const readyBtn = txBtn('READY', () => {
@@ -463,7 +404,7 @@ const Screens = (() => {
       readyBtn.classList.add('primary');
       if (!canReady) readyBtn.disabled = true;
 
-      nav.append(title, pts, backBtn, readyBtn);
+      nav.append(title, backBtn, readyBtn);
       ui.appendChild(nav);
 
       // ── Two-column layout ─────────────────────────────────
@@ -790,7 +731,7 @@ const Screens = (() => {
 
       state.playerPowerups.forEach((pid) => {
         const ico = el('div'); ico.className = 'pu-icon';
-        ico.appendChild(buildHexIcon(powerupIconKey(pid), state.playerTeam.color, true, 38, 44, 20));
+        ico.appendChild(buildHexIcon(powerupIconKey(pid), state.playerTeam.color, true, 30, 35, 16));
         ico.title = Data.POWERUPS[pid].name;
         const active = state.puData && state.puData.puId === pid && state.puState !== Game.PUSTATE.NONE;
         if (active) ico.classList.add('active');
@@ -820,7 +761,7 @@ const Screens = (() => {
 
       state.aiPowerups.forEach(pid => {
         const ico = el('div'); ico.className = 'pu-icon enemy';
-        ico.appendChild(buildHexIcon(powerupIconKey(pid), state.aiTeam.color, true, 38, 44, 20));
+        ico.appendChild(buildHexIcon(powerupIconKey(pid), state.aiTeam.color, true, 30, 35, 16));
         ico.title = Data.POWERUPS[pid].name;
         puBar.appendChild(ico);
       });
@@ -1121,6 +1062,71 @@ const Screens = (() => {
     wrap.append(outline, inner);
     return wrap;
   }
+
+
+function drawCombatPopup(ctx, data) {
+  const x = 348, y = 196, w = 584, h = 168;
+  const alpha = Math.max(0, Math.min(1, data.timer / 0.18, 1));
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = 'rgba(3,11,18,.94)';
+  ctx.strokeStyle = data.hit ? '#58c878' : '#d86060';
+  ctx.lineWidth = 2;
+  ctx.fillRect(x, y, w, h);
+  ctx.strokeRect(x, y, w, h);
+
+  drawPopupPortrait(ctx, x + 78, y + 84, 44, data.attackerPortrait, data.attackerColor);
+  drawPopupPortrait(ctx, x + w - 78, y + 84, 44, data.defenderPortrait, data.defenderColor);
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = '18px Iceberg';
+  ctx.fillStyle = '#dfeaf1';
+  ctx.fillText('ATTACK', x + 188, y + 28);
+  ctx.fillText('DEFENSE', x + w - 188, y + 28);
+
+  ctx.font = '12px RobotoMono';
+  ctx.fillStyle = '#8fb0bf';
+  ctx.fillText(`d10 ${data.atkBase} + ${data.atkMod}`, x + 188, y + 58);
+  ctx.fillText(`d10 ${data.defBase} + ${data.defMod}`, x + w - 188, y + 58);
+
+  ctx.font = '34px Iceberg';
+  ctx.fillStyle = data.attackerColor;
+  ctx.fillText(String(data.atkTotal), x + 188, y + 98);
+  ctx.fillStyle = data.defenderColor;
+  ctx.fillText(String(data.defTotal), x + w - 188, y + 98);
+
+  ctx.font = '30px Iceberg';
+  ctx.fillStyle = data.hit ? '#58c878' : '#d86060';
+  ctx.fillText(data.hit ? 'HIT' : 'MISS', x + w / 2, y + 82);
+
+  if (data.hit) {
+    ctx.font = '12px RobotoMono';
+    ctx.fillStyle = '#f0d34f';
+    ctx.fillText(`${data.damage} DMG`, x + w / 2, y + 116);
+  }
+  ctx.restore();
+}
+
+function drawPopupPortrait(ctx, cx, cy, r, key, stroke) {
+  const img = E.getImage(key);
+  ctx.save();
+  hexPath6(ctx, cx, cy, r);
+  ctx.fillStyle = 'rgba(8,18,28,.74)';
+  ctx.fill();
+  ctx.strokeStyle = stroke;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  if (img) {
+    ctx.save();
+    hexPath6(ctx, cx, cy, r - 2);
+    ctx.clip();
+    const w = r * 2.2, h = w;
+    ctx.drawImage(img, cx - w / 2, cy - h * 0.58, w, h);
+    ctx.restore();
+  }
+  ctx.restore();
+}
 
   function canvasMouse(e) {
     const rect = E.getCanvas().getBoundingClientRect();

@@ -1,3 +1,4 @@
+
 // ============================================================
 // ai.js — AI turn logic for Melee and CTF modes
 // ============================================================
@@ -5,8 +6,7 @@
 const AI = (() => {
 
   function takeTurn(state, api) {
-    const { liveUnits, unitAt, moveUnit, attackTarget,
-            removePowerup, logMsg, checkWin } = api;
+    const { liveUnits, unitAt, moveUnit, attackTarget, removePowerup, logMsg, checkWin } = api;
 
     const aiUnits = liveUnits('ai');
     const playerUnits = liveUnits('player');
@@ -24,7 +24,7 @@ const AI = (() => {
       }
     }
 
-    aiUnits.sort((a, b) => nearestEnemyDist(b, playerUnits) - nearestEnemyDist(a, playerUnits));
+    aiUnits.sort((a, b) => nearestEnemyDist(a, playerUnits) - nearestEnemyDist(b, playerUnits));
 
     for (const unit of aiUnits) {
       if (unit.hp <= 0 || unit.stunned) continue;
@@ -115,16 +115,13 @@ const AI = (() => {
       if (dest) moveUnit(unit, dest.col, dest.row);
     }
 
-    const refreshedCarrier = liveUnits('player').find(u => u.hasFlag);
     const attackable = liveUnits('player').filter(p =>
       p.hp > 0 &&
       Board.hexDistance(unit.col, unit.row, p.col, p.row) <= unit.range &&
       Board.hasLOS(unit.col, unit.row, p.col, p.row)
     );
-    if (refreshedCarrier && attackable.includes(refreshedCarrier) && !unit.attackedThisTurn) {
-      attackTarget(unit, refreshedCarrier.col, refreshedCarrier.row);
-    } else if (attackable.length && !unit.attackedThisTurn) {
-      const t = pickBestVictim(unit, attackable);
+    if (attackable.length && !unit.attackedThisTurn) {
+      const t = playerCarrier && attackable.includes(playerCarrier) ? playerCarrier : pickBestVictim(unit, attackable);
       attackTarget(unit, t.col, t.row);
     }
   }
@@ -192,11 +189,7 @@ const AI = (() => {
       if (d > maxSteps) continue;
 
       const distToTarget = Board.hexDistance(cur.col, cur.row, target.col, target.row);
-      const key = [
-        Math.max(0, distToTarget - unit.range),
-        distToTarget,
-        -d
-      ].join('|');
+      const key = [Math.max(0, distToTarget - unit.range), distToTarget, -d].join('|');
       if ((cur.col !== unit.col || cur.row !== unit.row) && (bestKey === null || key < bestKey)) {
         bestKey = key;
         best = cur;

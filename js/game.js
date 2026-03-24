@@ -193,6 +193,7 @@ const Game = (() => {
     state.highlights = {};
     const u = state.selectedUnit;
     if (!u) return;
+    state.highlights[Board.idx(u.col, u.row)] = { type: 'selected', color: u.team.color || '#ffff80' };
 
     if (state.phase === PHASE.MOVE && !u.stunned) {
       const maxSteps = Math.min(u.speed - u.speedUsedThisTurn, state.movePool);
@@ -272,7 +273,7 @@ const Game = (() => {
         const baseTiles = unit.side === 'player' ? Board.PLAYER_BASE : Board.AI_BASE;
         if (baseTiles.some(b => b.col === unit.col && b.row === unit.row)) {
           endGame(unit.side === 'player' ? 'player' : 'ai', 'Flag captured!');
-          return;
+          return true;
         }
       }
 
@@ -321,7 +322,8 @@ const Game = (() => {
 
   // ── Combat ───────────────────────────────────────────────
   function attackTarget(attacker, targetCol, targetRow) {
-    if (attacker.attackedThisTurn || attacker.stunned || (state.mode === 'ctf' && attacker.hasFlag)) return;
+    if (!state || !attacker || attacker.hp <= 0) return false;
+    if (attacker.attackedThisTurn || attacker.stunned || (state.mode === 'ctf' && attacker.hasFlag)) return false;
 
     // Check for mine target
     const mine = state.mines.find(m => m.col === targetCol && m.row === targetRow);
@@ -335,7 +337,7 @@ const Game = (() => {
     }
 
     const defender = unitAt(targetCol, targetRow);
-    if (!defender || defender.side === attacker.side || defender.hp <= 0) return;
+    if (!defender || defender.side === attacker.side || defender.hp <= 0) return false;
 
     attacker.attackedThisTurn = true;
 
@@ -366,6 +368,7 @@ const Game = (() => {
 
     clearSelection();
     checkWin();
+    return true;
   }
 
   function applyDamage(unit, amount, source) {
@@ -376,7 +379,7 @@ const Game = (() => {
   function applySpecial(attacker, defender) {
     switch (attacker.special) {
       case 'splash':
-        Board.neighbors(attacker.col, attacker.row).forEach(nb => {
+        Board.neighbors(defender.col, defender.row).forEach(nb => {
           const u = unitAt(nb.col, nb.row);
           if (u && u.side !== attacker.side && u.hp > 0) {
             applyDamage(u, 1, 'splash');
@@ -401,7 +404,7 @@ const Game = (() => {
           if (Board.isPassable(defender.col, r) && Board.getTile(defender.col, r) !== Board.TILE.OBSTACLE) {
             Board.setTile(defender.col, r, Board.TILE.FIRE);
             const u = unitAt(defender.col, r);
-            if (u && u.side !== attacker.side && u.hp > 0) applyDamage(u, 4, 'fire');
+            if (u && u.hp > 0) applyDamage(u, 4, 'fire');
           }
         }
         break;
@@ -457,7 +460,7 @@ const Game = (() => {
       for (let row = 0; row < Board.ROWS; row++) {
         for (let col = 0; col < Board.COLS; col++) {
           if (Board.isPassable(col, row) && !unitAt(col, row) && !state.mines.find(m => m.col === col && m.row === row)) {
-            state.highlights[Board.idx(col, row)] = 'mine_place';
+            state.highlights[Board.idx(col, row)] = { type:'mine_place', color: state.playerTeam.color };
           }
         }
       }
@@ -503,7 +506,7 @@ const Game = (() => {
         for (let r = 0; r < Board.ROWS; r++) {
           for (let c = 0; c < Board.COLS; c++) {
             if (Board.isPassable(c, r) && !unitAt(c, r)) {
-              state.highlights[Board.idx(c, r)] = 'teleport';
+              state.highlights[Board.idx(c, r)] = { type:'teleport', color: state.playerTeam.color };
             }
           }
         }
@@ -577,9 +580,12 @@ const Game = (() => {
       if (u.hp <= 0) return;
       if (u.poisoned) { applyDamage(u, 1, 'poison'); if (u.hp <= 0) return; }
       if (u.onFire)   { applyDamage(u, 2, 'fire');   u.onFire = false; }
-      // Acid tile
-      if (Board.getTile(u.col, u.row) === Board.TILE.ACID) {
+      const standingTile = Board.getTile(u.col, u.row);
+      if (standingTile === Board.TILE.ACID) {
         applyDamage(u, 2, 'acid_tile');
+      }
+      if (standingTile === Board.TILE.FIRE) {
+        applyDamage(u, 2, 'fire_tile');
       }
     });
   }
@@ -721,7 +727,7 @@ const Game = (() => {
         runAITurn();
         checkWin();
         if (state.phase !== PHASE.OVER) {
-          setTimeout(() => startNewPlayerTurn(), Math.max(650, (state.aiVisualDelay || 0) * 1000));
+          setTimeout(() => startNewPlayerTurn(), Math.max(1250, (state.aiVisualDelay || 0) * 1000));
         }
       }
     }
@@ -756,17 +762,11 @@ const Game = (() => {
 
     // Soldier sprite is 1024×1536 — a single full-body soldier
     // Draw so feet are just below hex center, scaled to fit within 1.8× hex radius
-    const sw = Board.HEX_R * 2.12;    // display width
+    const sw = Board.HEX_R * 2.18;    // display width
     const sh = sw * (1536 / 1024);   // maintain aspect ratio → ~2.7 × HEX_R tall
     const sx = x - sw / 2;
     const sy = y - sh + Board.HEX_R * 0.80;  // feet sit near hex center
 
-    if (state.selectedUnit && state.selectedUnit.id === unit.id) {
-      Board.drawHexPath(ctx, x, y, Board.HEX_R * 0.92);
-      ctx.strokeStyle = unit.team.color || '#ffff80';
-      ctx.lineWidth = 2.5;
-      ctx.stroke();
-    }
 
     ctx.save();
     ctx.globalAlpha = unit.stunned ? 0.5 : 1;
@@ -804,7 +804,7 @@ const Game = (() => {
     const w = Board.HEX_R * 1.4;
     const h = 4;
     const x = cx - w / 2;
-    const y = cy - Board.HEX_R * 0.14;
+    const y = cy - Board.HEX_R * 0.42;
 
     ctx.fillStyle = 'rgba(0,0,0,0.7)';
     ctx.fillRect(x, y, w, h);

@@ -9,7 +9,7 @@ const Board = (() => {
 
   // Board art in the visual guide uses flat-top hexes, then the whole board is
   // sheared and vertically compressed to create an isometric feel.
-  const HEX_R   = 29;
+  const HEX_R   = 31;
   const HEX_W   = HEX_R * 2;
   const HEX_H   = Math.sqrt(3) * HEX_R;
   const STEP_X  = HEX_R * 1.5;
@@ -266,8 +266,8 @@ const Board = (() => {
             base_player:  { fill:'rgba(58,138,250,0.14)', stroke:'rgba(58,138,250,0.45)', lw:1.5 },
             base_ai:      { fill:'rgba(250,80,80,0.14)',  stroke:'rgba(250,80,80,0.45)',  lw:1.5 },
             flag:         { fill:'rgba(255,230,50,0.32)', stroke:'rgba(255,230,50,0.90)', lw:2.5 },
-            teleport:     { fill:'rgba(180,80,255,0.26)', stroke:'rgba(180,80,255,0.82)', lw:2 },
-            mine_place:   { fill:'rgba(255,160,30,0.20)', stroke:'rgba(255,160,30,0.78)', lw:2 },
+            teleport:     { fill: withAlpha(moveStroke, 0.24), stroke: moveStroke, lw:2 },
+            mine_place:   { fill: withAlpha(moveStroke, 0.20), stroke: moveStroke, lw:2 },
           };
           const s = hlStyles[hl.type];
           if (s) {
