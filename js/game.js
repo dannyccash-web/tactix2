@@ -205,7 +205,7 @@ const Game = (() => {
         if (state.mode === 'ctf' && !u.hasFlag) {
           if (Board.isPlayerBase(col, row) || Board.isAIBase(col, row)) return;
         }
-        state.highlights[i] = 'move';
+        state.highlights[i] = { type:'move', color:(u.side === 'player' ? state.playerTeam.color : state.aiTeam.color) };
       });
     }
 
@@ -668,6 +668,7 @@ const Game = (() => {
         pendingAI = false;
         runAITurn();
         checkWin();
+        if (state.onPhaseChange) state.onPhaseChange(state.phase);
         if (state.phase !== PHASE.OVER) {
           setTimeout(() => startNewPlayerTurn(), 600);
         }
@@ -703,10 +704,10 @@ const Game = (() => {
 
     // Soldier sprite is 1024×1536 — a single full-body soldier
     // Draw so feet are just below hex center, scaled to fit within 1.8× hex radius
-    const sw = Board.HEX_R * 1.8;    // display width
+    const sw = Board.HEX_R * 2.1;    // display width
     const sh = sw * (1536 / 1024);   // maintain aspect ratio → ~2.7 × HEX_R tall
     const sx = x - sw / 2;
-    const sy = y - sh + Board.HEX_R * 0.7;  // feet sit near hex center
+    const sy = y - sh + Board.HEX_R * 0.8;  // feet sit near hex center
 
     ctx.save();
     ctx.globalAlpha = unit.stunned ? 0.5 : 1;

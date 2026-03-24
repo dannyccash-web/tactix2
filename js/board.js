@@ -9,7 +9,7 @@ const Board = (() => {
 
   // Board art in the visual guide uses flat-top hexes, then the whole board is
   // sheared and vertically compressed to create an isometric feel.
-  const HEX_R   = 24;
+  const HEX_R   = 28;
   const HEX_W   = HEX_R * 2;
   const HEX_H   = Math.sqrt(3) * HEX_R;
   const STEP_X  = HEX_R * 1.5;
@@ -254,11 +254,15 @@ const Board = (() => {
         ctx.lineWidth = 1;
         ctx.stroke();
 
-        const hl = highlights[i];
+        const rawHl = highlights[i];
+        const hl = typeof rawHl === 'string' ? { type: rawHl } : rawHl;
         if (hl) {
           drawHexPath(ctx, x, y, HEX_R);
+          const moveColor = hl.color || '#3a8afa';
+          const moveFill = moveColor + '33';
+          const moveStroke = moveColor;
           const hlStyles = {
-            move:         { fill:'rgba(58,138,250,0.30)', stroke:'rgba(58,138,250,0.88)', lw:2 },
+            move:         { fill:moveFill, stroke:moveStroke, lw:2 },
             attack:       { fill:'rgba(250,60,60,0.28)',  stroke:'rgba(250,60,60,0.88)',  lw:2 },
             selected:     { fill:'rgba(255,255,80,0.18)', stroke:'rgba(255,255,80,0.92)', lw:2.5 },
             base_player:  { fill:'rgba(58,138,250,0.14)', stroke:'rgba(58,138,250,0.45)', lw:1.5 },
@@ -267,7 +271,7 @@ const Board = (() => {
             teleport:     { fill:'rgba(180,80,255,0.26)', stroke:'rgba(180,80,255,0.82)', lw:2 },
             mine_place:   { fill:'rgba(255,160,30,0.20)', stroke:'rgba(255,160,30,0.78)', lw:2 },
           };
-          const s = hlStyles[hl];
+          const s = hlStyles[hl.type];
           if (s) {
             ctx.fillStyle = s.fill;
             ctx.fill();

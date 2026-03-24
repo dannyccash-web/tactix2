@@ -13,6 +13,7 @@ const AI = (() => {
     const playerUnits = liveUnits('player');
 
     if (!aiUnits.length) return;
+    let acted = false;
 
     // ── 1. Use med pack if any AI unit is badly hurt ──────
     const medIdx = state.aiPowerups.indexOf('med_pack');
@@ -32,11 +33,13 @@ const AI = (() => {
     for (const unit of aiUnits) {
       if (unit.hp <= 0 || unit.stunned) continue;
 
+      const before = { col: unit.col, row: unit.row, hp: unit.hp, attacked: unit.attackedThisTurn };
       if (state.mode === 'ctf') {
         doCtfMove(unit, state, api);
       } else {
         doMeleeMove(unit, state, api);
       }
+      if (unit.col !== before.col || unit.row !== before.row || unit.hp !== before.hp || unit.attackedThisTurn !== before.attacked) acted = true;
 
       checkWin();
       if (state.phase === 'over') return;
@@ -60,7 +63,18 @@ const AI = (() => {
         state.mines.push({ col: t.col, row: t.row, owner: 'ai' });
         removePowerup('ai', 'mine');
         logMsg('AI placed a mine');
+        acted = true;
       }
+    }
+
+    if (!acted && aiUnits.length && playerUnits.length) {
+      const unit = aiUnits[0];
+      const target = playerUnits.reduce((best, p) => {
+        const d = Board.hexDistance(unit.col, unit.row, p.col, p.row);
+        return !best || d < best.d ? { p, d } : best;
+      }, null).p;
+      const dest = bestApproach(unit, target, Math.min(unit.speed, state.movePool), state, api);
+      if (dest) moveUnit(unit, dest.col, dest.row);
     }
   }
 

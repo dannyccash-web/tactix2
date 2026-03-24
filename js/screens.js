@@ -80,8 +80,8 @@ const Screens = (() => {
       .menu-tab-btn.active { color:#c8dce8; border-bottom:2px solid #4a90b0; }
 
       .squad-card {
-        display:flex; align-items:center; gap:12px;
-        padding:10px 12px; margin-bottom:7px;
+        display:flex; align-items:center; gap:10px;
+        padding:8px 10px; margin-bottom:6px;
         background:rgba(8,20,32,.7);
         border:1px solid #182838;
         transition:background .1s;
@@ -130,26 +130,26 @@ const Screens = (() => {
       if (logo) {
         const lw = 820;
         const lh = logo.height * (lw / logo.width);
-        ctx.drawImage(logo, (1280 - lw) / 2, 52, lw, lh);
+        ctx.drawImage(logo, (1280 - lw) / 2, 52 + lh, lw, lh);
       }
 
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.shadowColor = 'rgba(0,0,0,.9)';
-      ctx.shadowBlur = 18;
+      ctx.shadowColor = 'transparent';
+      ctx.shadowBlur = 0;
       ctx.font = '34px Iceberg';
-      ctx.fillStyle = '#5f7280';
+      ctx.fillStyle = '#425a6a';
       ctx.fillText('TURN-BASED COMBAT', 640, 406);
 
       const bw = 250, bh = 64;
       const bx = 640 - bw / 2, by = 474;
-      ctx.fillStyle = 'rgba(64,82,96,.88)';
+      ctx.fillStyle = 'rgba(104,120,132,.88)';
       ctx.fillRect(bx, by, bw, bh);
       ctx.strokeStyle = '#7da4b3';
       ctx.lineWidth = 2;
       ctx.strokeRect(bx, by, bw, bh);
       ctx.font = '30px Iceberg';
-      ctx.fillStyle = '#dbe9f1';
+      ctx.fillStyle = '#2d4352';
       ctx.fillText('START', 640, by + bh / 2 + 1);
 
       ctx.restore();
@@ -231,15 +231,19 @@ const Screens = (() => {
 
       const icon = E.getImage(iconKey);
       if (icon) {
-        const sz = hot ? 164 : 154;
-        ctx.drawImage(icon, cx - sz / 2, cy - 110, sz, sz);
+        const maxW = hot ? 154 : 146;
+        const maxH = hot ? 126 : 118;
+        const scale = Math.min(maxW / icon.width, maxH / icon.height);
+        const w = icon.width * scale;
+        const h = icon.height * scale;
+        ctx.drawImage(icon, cx - w / 2, cy - 102, w, h);
       }
 
       ctx.font = '20px Iceberg';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillStyle = hot ? '#fff' : '#c7d8e2';
-      ctx.fillText(label, cx, cy + 66);
+      ctx.fillText(label, cx, cy + 78);
       ctx.restore();
     }
 
@@ -254,14 +258,14 @@ const Screens = (() => {
     let hovered = null;
 
     const layout = [
-      { id: 'vermillion', x: 160, y: 456 },
-      { id: 'azure',      x: 365, y: 300 },
-      { id: 'virent',     x: 640, y: 450 },
-      { id: 'phlox',      x: 865, y: 300 },
-      { id: 'magma',      x: 1115, y: 456 }
+      { id: 'vermillion', x: 170,  y: 430 },
+      { id: 'azure',      x: 395,  y: 308 },
+      { id: 'virent',     x: 640,  y: 430 },
+      { id: 'phlox',      x: 885,  y: 308 },
+      { id: 'magma',      x: 1110, y: 430 }
     ];
     const teams = layout.map(item => Data.TEAMS[item.id]);
-    const R = 98;
+    const R = 112;
 
     function hit(mx, my, cx, cy, r) {
       return Math.hypot(mx - cx, my - cy) < r * 0.92;
@@ -337,7 +341,7 @@ const Screens = (() => {
         ctx.restore();
       }
 
-      ctx.font = `${hot ? 16 : 14}px Iceberg`;
+      ctx.font = `${hot ? 18 : 16}px Iceberg`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillStyle = '#eef6fb';
@@ -390,7 +394,7 @@ const Screens = (() => {
       });
 
       const title = el('div', {
-        fontFamily:'Iceberg,monospace', fontSize:'18px', letterSpacing:'4px', color:'#d8e6ee'
+        fontFamily:'Iceberg,monospace', fontSize:'20px', letterSpacing:'4px', color:'#e6f2f8'
       });
       title.textContent = 'BUILD YOUR SQUAD';
 
@@ -418,7 +422,7 @@ const Screens = (() => {
 
       // Left: available pool
       const left = el('div', {
-        width:'42%', padding:'18px 20px',
+        width:'45%', padding:'16px 20px',
         background:'rgba(4,12,20,.90)',
         borderRight:'1px solid #162434', overflowY:'auto'
       });
@@ -438,7 +442,7 @@ const Screens = (() => {
       });
 
       const squadHdr = el('div', {
-        fontFamily:'Iceberg,monospace', fontSize:'18px', letterSpacing:'3px',
+        fontFamily:'Iceberg,monospace', fontSize:'20px', letterSpacing:'3px',
         color:'#e6f1f7', marginBottom:'14px', display:'flex', justifyContent:'space-between'
       });
       squadHdr.innerHTML = `<span>YOUR SQUAD</span><span style="color:${rem>=0?'#f0d34f':'#c84444'}">${cost}/${Data.SQUAD_BUDGET} PTS</span>`;
@@ -446,7 +450,7 @@ const Screens = (() => {
 
       if (!roster.length && !powerups.length) {
         const hint = el('div', {
-          fontFamily:'RobotoMono,monospace', fontSize:'11px', color:'#283848', marginTop:'20px'
+          fontFamily:'RobotoMono,monospace', fontSize:'12px', color:'#355064', marginTop:'20px'
         });
         hint.textContent = 'Add soldiers and power-ups from the left panel.';
         right.appendChild(hint);
@@ -454,14 +458,14 @@ const Screens = (() => {
 
       roster.forEach((uid, i) => {
         const u = Data.UNITS[uid];
-        right.appendChild(rosterRow(u.name, u.cost, team.color, () => removeUnit(i)));
+        right.appendChild(rosterRow(u.name, u.cost, team.color, () => removeUnit(i), unitIconKey(u.id)));
       });
 
       if (powerups.length) {
         sectionHeader(right, 'POWER UPS', {marginTop:'14px'});
         powerups.forEach((pid, i) => {
           const pu = Data.POWERUPS[pid];
-          right.appendChild(rosterRow(pu.name, pu.cost, '#c0a040', () => removePowerup(i)));
+          right.appendChild(rosterRow(pu.name, pu.cost, team.color, () => removePowerup(i), powerupIconKey(pu.id), true));
         });
       }
 
@@ -490,9 +494,9 @@ const Screens = (() => {
       const iconHex = buildHexIcon(unitIconKey(u.id), team.color, false);
 
       const info = el('div', { flex:'1' });
-      const nm = el('div', { fontFamily:'Iceberg,monospace', fontSize:'17px', color:'#f1f7fb', letterSpacing:'1px' });
+      const nm = el('div', { fontFamily:'Iceberg,monospace', fontSize:'15px', color:'#f1f7fb', letterSpacing:'1px' });
       nm.textContent = u.name;
-      const st = el('div', { fontFamily:'RobotoMono,monospace', fontSize:'10px', color:'#9cb3c0', marginTop:'2px' });
+      const st = el('div', { fontFamily:'RobotoMono,monospace', fontSize:'9px', color:'#9cb3c0', marginTop:'2px' });
       st.textContent = `SPEED ${u.speed}  RANGE ${u.range}  ATK +${u.atk}  DEF +${u.def}  DMG ${u.dmg}  HP ${u.hp}`;
       info.append(nm, st);
       if (u.special) {
@@ -518,7 +522,7 @@ const Screens = (() => {
       const iconHex = buildHexIcon(powerupIconKey(pu.id), team.color, true);
 
       const info = el('div', { flex:'1' });
-      const nm = el('div', { fontFamily:'Iceberg,monospace', fontSize:'17px', color:'#ffffff', letterSpacing:'1px' });
+      const nm = el('div', { fontFamily:'Iceberg,monospace', fontSize:'15px', color:'#ffffff', letterSpacing:'1px' });
       nm.textContent = pu.name;
       const desc = el('div', { fontFamily:'RobotoMono,monospace', fontSize:'10px', color:'#ffffff', marginTop:'2px' });
       desc.textContent = pu.desc;
@@ -585,7 +589,8 @@ const Screens = (() => {
       }
 
       const tileIdx = Board.idx(col, row);
-      const hl      = state.highlights[tileIdx];
+      const rawHl   = state.highlights[tileIdx];
+      const hl      = typeof rawHl === 'string' ? rawHl : rawHl?.type;
 
       if (ph === Game.PHASE.MOVE) {
         if (hl === 'move' && state.selectedUnit) {
@@ -721,7 +726,7 @@ const Screens = (() => {
 
       // ── Bottom power-up bar ────────────────────────────
       const puBar = el('div', {
-        position:'absolute', bottom:'0', left:'0', right:'0', height:'52px',
+        position:'absolute', bottom:'0', left:'0', right:'0', height:'56px',
         background:'rgba(3,9,16,.92)', borderTop:'1px solid #111e2a',
         display:'flex', alignItems:'center', padding:'0 20px', gap:'16px',
         zIndex:'10'
@@ -736,10 +741,7 @@ const Screens = (() => {
         const ico = el('div'); ico.className = 'pu-icon';
         const puImg = E.getImage(powerupIconKey(pid));
         if (puImg) {
-          const im = el('img', { src: puImg.src, draggable:false });
-          im.style.width = '18px';
-          im.style.height = '18px';
-          im.style.objectFit = 'contain';
+          const im = el('img', { width:'22px', height:'22px', objectFit:'contain' }, { src: puImg.src, draggable:false });
           ico.appendChild(im);
         }
         ico.title = Data.POWERUPS[pid].name;
@@ -771,7 +773,13 @@ const Screens = (() => {
 
       state.aiPowerups.forEach(pid => {
         const ico = el('div'); ico.className = 'pu-icon enemy';
-        ico.textContent = puIconChar(pid);
+        const puImg = E.getImage(powerupIconKey(pid));
+        if (puImg) {
+          const im = el('img', { width:'22px', height:'22px', objectFit:'contain', opacity:'0.75' }, { src: puImg.src, draggable:false });
+          ico.appendChild(im);
+        } else {
+          ico.textContent = puIconChar(pid);
+        }
         ico.title = Data.POWERUPS[pid].name;
         puBar.appendChild(ico);
       });
@@ -1027,7 +1035,7 @@ const Screens = (() => {
 
   function buildHexIcon(iconKey, accentColor, isPowerup) {
     const wrap = el('div', {
-      width:'72px', height:'78px', flexShrink:'0', position:'relative'
+      width:'56px', height:'62px', flexShrink:'0', position:'relative'
     });
     const outline = el('div', {
       position:'absolute', inset:'0',
@@ -1043,11 +1051,12 @@ const Screens = (() => {
     });
     const icon = E.getImage(iconKey);
     if (icon) {
-      const img = el('img', { src: icon.src, draggable:false });
-      img.style.width = isPowerup ? '42px' : '46px';
-      img.style.height = isPowerup ? '42px' : '46px';
-      img.style.objectFit = 'contain';
-      img.style.filter = 'drop-shadow(0 0 6px rgba(255,255,255,.18))';
+      const img = el('img', {
+        width: isPowerup ? '34px' : '38px',
+        height: isPowerup ? '34px' : '38px',
+        objectFit: 'contain',
+        filter: 'drop-shadow(0 0 6px rgba(255,255,255,.18))'
+      }, { src: icon.src, draggable:false });
       inner.appendChild(img);
     } else {
       const fallback = el('div', { fontFamily:'Iceberg,monospace', fontSize:'22px', color:'#fff' });
