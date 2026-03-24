@@ -33,13 +33,11 @@ const AI = (() => {
     for (const unit of aiUnits) {
       if (unit.hp <= 0 || unit.stunned) continue;
 
-      const before = { col: unit.col, row: unit.row, hp: unit.hp, attacked: unit.attackedThisTurn };
       if (state.mode === 'ctf') {
-        doCtfMove(unit, state, api);
+        const before = `${unit.col},${unit.row},${unit.hp}`; doCtfMove(unit, state, api); if (`${unit.col},${unit.row},${unit.hp}` !== before || unit.attackedThisTurn) acted = true;
       } else {
-        doMeleeMove(unit, state, api);
+        const before = `${unit.col},${unit.row},${unit.hp}`; doMeleeMove(unit, state, api); if (`${unit.col},${unit.row},${unit.hp}` !== before || unit.attackedThisTurn) acted = true;
       }
-      if (unit.col !== before.col || unit.row !== before.row || unit.hp !== before.hp || unit.attackedThisTurn !== before.attacked) acted = true;
 
       checkWin();
       if (state.phase === 'over') return;
@@ -63,18 +61,14 @@ const AI = (() => {
         state.mines.push({ col: t.col, row: t.row, owner: 'ai' });
         removePowerup('ai', 'mine');
         logMsg('AI placed a mine');
-        acted = true;
       }
     }
 
     if (!acted && aiUnits.length && playerUnits.length) {
       const unit = aiUnits[0];
-      const target = playerUnits.reduce((best, p) => {
-        const d = Board.hexDistance(unit.col, unit.row, p.col, p.row);
-        return !best || d < best.d ? { p, d } : best;
-      }, null).p;
+      const target = playerUnits.slice().sort((p1,p2)=>Board.hexDistance(unit.col, unit.row, p1.col, p1.row)-Board.hexDistance(unit.col, unit.row, p2.col, p2.row))[0];
       const dest = bestApproach(unit, target, Math.min(unit.speed, state.movePool), state, api);
-      if (dest) moveUnit(unit, dest.col, dest.row);
+      if (dest) api.moveUnit(unit, dest.col, dest.row);
     }
   }
 
@@ -206,7 +200,7 @@ const AI = (() => {
         if (dest) api.moveUnit(unit, dest.col, dest.row);
       } else {
         // Intercept player carrier or attack
-        doMeleeMove(unit, state, api);
+        const before = `${unit.col},${unit.row},${unit.hp}`; doMeleeMove(unit, state, api); if (`${unit.col},${unit.row},${unit.hp}` !== before || unit.attackedThisTurn) acted = true;
       }
     } else if (playerCarrier) {
       // Prioritize stopping the carrier
@@ -225,7 +219,7 @@ const AI = (() => {
         }
       }
     } else {
-      doMeleeMove(unit, state, api);
+      const before = `${unit.col},${unit.row},${unit.hp}`; doMeleeMove(unit, state, api); if (`${unit.col},${unit.row},${unit.hp}` !== before || unit.attackedThisTurn) acted = true;
     }
   }
 

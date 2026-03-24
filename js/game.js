@@ -205,7 +205,7 @@ const Game = (() => {
         if (state.mode === 'ctf' && !u.hasFlag) {
           if (Board.isPlayerBase(col, row) || Board.isAIBase(col, row)) return;
         }
-        state.highlights[i] = { type:'move', color:(u.side === 'player' ? state.playerTeam.color : state.aiTeam.color) };
+        state.highlights[i] = { type: 'move', color: u.team.color || '#3a8afa' };
       });
     }
 
@@ -243,7 +243,8 @@ const Game = (() => {
   // ── Movement ─────────────────────────────────────────────
   function moveUnit(unit, toCol, toRow, callback) {
     if (unit.stunned) return;
-    const maxSteps = Math.min(unit.speed - unit.speedUsedThisTurn, state.movePool);
+    const maxSpeed = (state.mode === 'ctf' && unit.hasFlag) ? 2 : unit.speed;
+    const maxSteps = Math.min(maxSpeed - unit.speedUsedThisTurn, state.movePool);
     const path = Board.findPath(unit.col, unit.row, toCol, toRow, (c, r) => !!unitAt(c, r));
     if (!path || path.length > maxSteps) return;
 
@@ -320,7 +321,7 @@ const Game = (() => {
 
   // ── Combat ───────────────────────────────────────────────
   function attackTarget(attacker, targetCol, targetRow) {
-    if (attacker.attackedThisTurn || attacker.stunned) return;
+    if (attacker.attackedThisTurn || attacker.stunned || (state.mode === 'ctf' && attacker.hasFlag)) return;
 
     // Check for mine target
     const mine = state.mines.find(m => m.col === targetCol && m.row === targetRow);
@@ -338,8 +339,10 @@ const Game = (() => {
 
     attacker.attackedThisTurn = true;
 
-    const atkRoll  = Math.ceil(Math.random() * 10) + attacker.atk;
-    const defRoll  = Math.ceil(Math.random() * 10) + defender.def;
+    const atkBase  = Math.ceil(Math.random() * 10);
+    const defBase  = Math.ceil(Math.random() * 10);
+    const atkRoll  = atkBase + attacker.atk;
+    const defRoll  = defBase + defender.def;
     const hit = atkRoll > defRoll;
 
     if (hit) {
@@ -351,6 +354,14 @@ const Game = (() => {
     }
 
     spawnCombatAnim(attacker, defender, hit);
+    state.combatPopup = {
+      attackerPortrait: attacker.team.portrait,
+      defenderPortrait: defender.team.portrait,
+      attackerColor: attacker.team.color,
+      defenderColor: defender.team.color,
+      atkBase, defBase, atkMod: attacker.atk, defMod: defender.def,
+      atkTotal: atkRoll, defTotal: defRoll, hit, damage: attacker.dmg, timer: 1.6
+    };
     logMsg(`${attacker.name} → ${defender.name}: ${hit ? 'HIT ' + attacker.dmg + ' dmg' : 'MISS'} (${atkRoll} vs ${defRoll})`);
 
     clearSelection();
@@ -534,6 +545,8 @@ const Game = (() => {
 
   function endPlayerTurn() {
     if (state.phase === PHASE.OVER) return;
+    clearSelection();
+    cancelPowerup();
     setPhase(PHASE.ENEMY);
     pendingAI = true;
     aiTimer = 0.8; // delay before AI moves
@@ -617,10 +630,11 @@ const Game = (() => {
     });
   }
 
-  // AI version of move (no animations, instant)
+  // AI version of move with visual step-through animation
   function aiMoveUnit(unit, toCol, toRow) {
     if (unit.stunned) return;
-    const maxSteps = Math.min(unit.speed - unit.speedUsedThisTurn, state.movePool);
+    const maxSpeed = (state.mode === 'ctf' && unit.hasFlag) ? 2 : unit.speed;
+    const maxSteps = Math.min(maxSpeed - unit.speedUsedThisTurn, state.movePool);
     const path = Board.findPath(unit.col, unit.row, toCol, toRow, (c, r) => !!unitAt(c, r));
     if (!path || path.length > maxSteps) return;
 
@@ -633,13 +647,20 @@ const Game = (() => {
     state.movePool -= path.length;
     unit.movedThisTurn = true;
 
-    // Step through path, check mines
+    const start = Board.hexCenter(unit.col, unit.row);
+    unit.visualX = start.x; unit.visualY = start.y;
+    unit.visualPath = path.map(step => Board.hexCenter(step.col, step.row));
+    unit.visualPathIndex = 0;
+    unit.visualStepTimer = 0;
+    unit.visualStepDuration = 0.1;
+    state.aiVisualDelay = Math.max(state.aiVisualDelay || 0, path.length * 0.1 + 0.25);
+
+    // Resolve logic immediately while visuals catch up
     for (const step of path) {
       unit.col = step.col;
       unit.row = step.row;
       const mine = state.mines.find(m => m.col === step.col && m.row === step.row);
       if (mine) { triggerMine(mine, unit); if (unit.hp <= 0) return; }
-      // CTF flag
       if (state.mode === 'ctf' && state.flag && !state.flag.carrier) {
         if (unit.col === state.flag.col && unit.row === state.flag.row) {
           state.flag.carrier = unit.id;
@@ -661,16 +682,41 @@ const Game = (() => {
   function update(dt) {
     if (!state) return;
 
+    if (state.combatPopup) {
+      state.combatPopup.timer -= dt;
+      if (state.combatPopup.timer <= 0) state.combatPopup = null;
+    }
+
+    allUnits().forEach(u => {
+      if (u.visualPath && u.visualPath.length) {
+        const target = u.visualPath[0];
+        if (u.visualX == null || u.visualY == null) {
+          u.visualX = target.x; u.visualY = target.y;
+        }
+        const speed = Math.min(1, dt / (u.visualStepDuration || 0.1));
+        u.visualX += (target.x - u.visualX) * Math.max(0.28, speed);
+        u.visualY += (target.y - u.visualY) * Math.max(0.28, speed);
+        if (Math.hypot(target.x - u.visualX, target.y - u.visualY) < 1.2) {
+          u.visualX = target.x; u.visualY = target.y;
+          u.visualPath.shift();
+          if (!u.visualPath.length) {
+            u.visualPath = null;
+            u.visualX = null; u.visualY = null;
+          }
+        }
+      }
+    });
+
     // AI turn timer
     if (state.phase === PHASE.ENEMY && pendingAI) {
       aiTimer -= dt;
       if (aiTimer <= 0) {
         pendingAI = false;
+        state.aiVisualDelay = 0;
         runAITurn();
         checkWin();
-        if (state.onPhaseChange) state.onPhaseChange(state.phase);
         if (state.phase !== PHASE.OVER) {
-          setTimeout(() => startNewPlayerTurn(), 600);
+          setTimeout(() => startNewPlayerTurn(), Math.max(650, (state.aiVisualDelay || 0) * 1000));
         }
       }
     }
@@ -697,17 +743,18 @@ const Game = (() => {
 
   function drawUnit(ctx, unit) {
     if (unit.hp <= 0) return;
-    const { x, y } = Board.hexCenter(unit.col, unit.row);
+    const p = (unit.visualX != null && unit.visualY != null) ? { x: unit.visualX, y: unit.visualY } : Board.hexCenter(unit.col, unit.row);
+    const { x, y } = p;
 
     const spriteImg = TactixEngine.getImage(unit.team.spriteKey);
     if (!spriteImg) return;
 
     // Soldier sprite is 1024×1536 — a single full-body soldier
     // Draw so feet are just below hex center, scaled to fit within 1.8× hex radius
-    const sw = Board.HEX_R * 2.1;    // display width
+    const sw = Board.HEX_R * 2.0;    // display width
     const sh = sw * (1536 / 1024);   // maintain aspect ratio → ~2.7 × HEX_R tall
     const sx = x - sw / 2;
-    const sy = y - sh + Board.HEX_R * 0.8;  // feet sit near hex center
+    const sy = y - sh + Board.HEX_R * 0.76;  // feet sit near hex center
 
     ctx.save();
     ctx.globalAlpha = unit.stunned ? 0.5 : 1;
@@ -752,7 +799,7 @@ const Game = (() => {
     const w = Board.HEX_R * 1.4;
     const h = 4;
     const x = cx - w / 2;
-    const y = cy + Board.HEX_R * 0.7;
+    const y = cy + Board.HEX_R * 0.48;
 
     ctx.fillStyle = 'rgba(0,0,0,0.7)';
     ctx.fillRect(x, y, w, h);
@@ -856,6 +903,7 @@ const Game = (() => {
     setPhase, endPlayerTurn, startNewPlayerTurn,
     update, render,
     getTooltipFor,
+    getCombatPopup: () => state?.combatPopup || null,
     logMsg
   };
 })();

@@ -9,7 +9,7 @@ const Board = (() => {
 
   // Board art in the visual guide uses flat-top hexes, then the whole board is
   // sheared and vertically compressed to create an isometric feel.
-  const HEX_R   = 28;
+  const HEX_R   = 27;
   const HEX_W   = HEX_R * 2;
   const HEX_H   = Math.sqrt(3) * HEX_R;
   const STEP_X  = HEX_R * 1.5;
@@ -20,7 +20,7 @@ const Board = (() => {
   const SCALE_Y = 0.75;
 
   const GAME_TOP    = 48;
-  const GAME_BOTTOM = 52;
+  const GAME_BOTTOM = 56;
   const GAME_H      = 720 - GAME_TOP - GAME_BOTTOM;
 
   const TILE = { EMPTY: 0, OBSTACLE: 1, ACID: 2, FIRE: 3 };
@@ -258,11 +258,9 @@ const Board = (() => {
         const hl = typeof rawHl === 'string' ? { type: rawHl } : rawHl;
         if (hl) {
           drawHexPath(ctx, x, y, HEX_R);
-          const moveColor = hl.color || '#3a8afa';
-          const moveFill = moveColor + '33';
-          const moveStroke = moveColor;
+          const moveStroke = hl.color || 'rgba(58,138,250,0.88)';
           const hlStyles = {
-            move:         { fill:moveFill, stroke:moveStroke, lw:2 },
+            move:         { fill: withAlpha(moveStroke, 0.28), stroke: moveStroke, lw:2 },
             attack:       { fill:'rgba(250,60,60,0.28)',  stroke:'rgba(250,60,60,0.88)',  lw:2 },
             selected:     { fill:'rgba(255,255,80,0.18)', stroke:'rgba(255,255,80,0.92)', lw:2.5 },
             base_player:  { fill:'rgba(58,138,250,0.14)', stroke:'rgba(58,138,250,0.45)', lw:1.5 },
@@ -285,6 +283,14 @@ const Board = (() => {
         if (mine) drawMineToken(ctx, x, y, mine.owner);
       }
     }
+  }
+
+  function withAlpha(hex, alpha) {
+    if (!hex || !hex.startsWith('#')) return hex;
+    const raw = hex.slice(1);
+    const full = raw.length === 3 ? raw.split('').map(ch => ch + ch).join('') : raw;
+    const r = parseInt(full.slice(0,2),16), g = parseInt(full.slice(2,4),16), b = parseInt(full.slice(4,6),16);
+    return `rgba(${r},${g},${b},${alpha})`;
   }
 
   function drawMineToken(ctx, cx, cy, owner) {
