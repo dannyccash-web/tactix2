@@ -9,7 +9,7 @@ const Board = (() => {
 
   // Board art in the visual guide uses flat-top hexes, then the whole board is
   // sheared and vertically compressed to create an isometric feel.
-  const HEX_R   = 27;
+  const HEX_R   = 29;
   const HEX_W   = HEX_R * 2;
   const HEX_H   = Math.sqrt(3) * HEX_R;
   const STEP_X  = HEX_R * 1.5;

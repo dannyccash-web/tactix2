@@ -23,15 +23,15 @@ const Screens = (() => {
       .tx-btn {
         font-family:'Iceberg',monospace;
         font-size:13px; letter-spacing:2px;
-        color:#b0ccd8; background:transparent;
-        border:1.5px solid #3a5868;
+        color:#eef6fb; background:rgba(14,26,38,.68);
+        border:1.5px solid #7da4b3;
         padding:7px 20px; cursor:pointer;
-        transition:background .12s,border-color .12s,color .12s;
+        transition:background .12s,border-color .12s,color .12s, box-shadow .12s;
         text-transform:uppercase;
       }
-      .tx-btn:hover { background:rgba(58,138,168,0.22); border-color:#6aacca; color:#dff0fa; }
-      .tx-btn.primary { border-color:#2a8a50; color:#3ad870; }
-      .tx-btn.primary:hover { background:rgba(42,138,80,0.22); border-color:#4aee88; }
+      .tx-btn:hover { background:rgba(22,42,58,.82); border-color:#a6c0cd; color:#ffffff; }
+      .tx-btn.primary { border-color:#2a8a50; color:#3ad870; background:rgba(10,24,16,.78); box-shadow:0 0 16px rgba(58,216,112,.15) inset; }
+      .tx-btn.primary:hover { background:rgba(18,38,24,.9); border-color:#4aee88; }
       .tx-btn:disabled { opacity:.3; pointer-events:none; }
 
       .phase-btn {
@@ -47,7 +47,7 @@ const Screens = (() => {
       .phase-btn.active { background:rgba(255,255,255,.1); }
 
       .pu-icon {
-        width:48px; height:54px;
+        width:42px; height:48px;
         display:flex; align-items:center; justify-content:center;
         cursor:pointer; color:#90b8c8;
         background:transparent;
@@ -80,7 +80,7 @@ const Screens = (() => {
 
       .squad-card {
         display:flex; align-items:center; gap:12px;
-        padding:10px 12px; margin-bottom:7px;
+        padding:8px 10px; margin-bottom:6px;
         background:rgba(8,20,32,.7);
         border:1px solid #182838;
         transition:background .1s;
@@ -222,17 +222,24 @@ const Screens = (() => {
   function GameSelect() {
     let fade = 0;
     let hovered = null;
+    let selectedMode = null;
 
-    const MELEE_CX = 390, CTF_CX = 890, CARD_CY = 430, CARD_R = 138;
+    const MELEE_CX = 390, CTF_CX = 890, CARD_CY = 404, CARD_R = 138;
 
     function hitHex(mx, my, cx, cy, r) {
       return Math.hypot(mx - cx, my - cy) < r * 0.92;
     }
 
+    function buildNav() {
+      buildTopBar('CHOOSE YOUR GAME', () => E.setScreen(Title()), selectedMode ? () => E.setScreen(TeamSelect(selectedMode)) : null, !!selectedMode);
+    }
+
     function handleClick(e) {
       const {mx, my} = canvasMouse(e);
-      if (hitHex(mx, my, MELEE_CX, CARD_CY, CARD_R)) E.setScreen(TeamSelect('melee'));
-      else if (hitHex(mx, my, CTF_CX, CARD_CY, CARD_R)) E.setScreen(TeamSelect('ctf'));
+      if (hitHex(mx, my, MELEE_CX, CARD_CY, CARD_R)) selectedMode = 'melee';
+      else if (hitHex(mx, my, CTF_CX, CARD_CY, CARD_R)) selectedMode = 'ctf';
+      else return;
+      buildNav();
     }
 
     function handleMove(e) {
@@ -245,7 +252,7 @@ const Screens = (() => {
     function enter() {
       E.getCanvas().addEventListener('click', handleClick);
       E.getCanvas().addEventListener('mousemove', handleMove);
-      buildTopBar('GAME SELECT', () => E.setScreen(Title()));
+      buildNav();
     }
     function destroy() {
       E.getCanvas().removeEventListener('click', handleClick);
@@ -260,17 +267,8 @@ const Screens = (() => {
       ctx.save();
       ctx.globalAlpha = fade;
 
-      ctx.font = '28px Iceberg';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillStyle = '#d3e1ea';
-      ctx.shadowColor = 'rgba(0,0,0,.88)';
-      ctx.shadowBlur = 12;
-      ctx.fillText('CHOOSE YOUR GAME', 640, 184);
-      ctx.shadowBlur = 0;
-
-      drawModeHex(ctx, MELEE_CX, CARD_CY, CARD_R, 'melee_icon', 'MELEE', hovered === 'melee');
-      drawModeHex(ctx, CTF_CX, CARD_CY, CARD_R, 'capture_the_flag_icon', 'CAPTURE THE FLAG', hovered === 'ctf');
+      drawModeHex(ctx, MELEE_CX, CARD_CY, CARD_R, 'melee_icon', 'MELEE', hovered === 'melee' || selectedMode === 'melee');
+      drawModeHex(ctx, CTF_CX, CARD_CY, CARD_R, 'capture_the_flag_icon', 'CAPTURE THE FLAG', hovered === 'ctf' || selectedMode === 'ctf');
 
       ctx.restore();
     }
@@ -289,19 +287,19 @@ const Screens = (() => {
 
       const icon = E.getImage(iconKey);
       if (icon) {
-        const maxW = hot ? 150 : 142;
-        const maxH = hot ? 118 : 110;
+        const maxW = hot ? 154 : 146;
+        const maxH = hot ? 104 : 98;
         const scale = Math.min(maxW / icon.width, maxH / icon.height);
         const w = icon.width * scale;
         const h = icon.height * scale;
-        ctx.drawImage(icon, cx - w / 2, cy - 78, w, h);
+        ctx.drawImage(icon, cx - w / 2, cy - 44 - h / 2, w, h);
       }
 
       ctx.font = '20px Iceberg';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillStyle = hot ? '#fff' : '#c7d8e2';
-      ctx.fillText(label, cx, cy + 52);
+      ctx.fillText(label, cx, cy + 36);
       ctx.restore();
     }
 
@@ -314,26 +312,32 @@ const Screens = (() => {
   function TeamSelect(mode) {
     let fade = 0;
     let hovered = null;
+    let selectedTeam = null;
 
     const layout = [
-      { id: 'vermillion', x: 170, y: 438 },
-      { id: 'azure',      x: 405, y: 306 },
-      { id: 'virent',     x: 640, y: 438 },
-      { id: 'phlox',      x: 875, y: 306 },
-      { id: 'magma',      x: 1110, y: 438 }
+      { id: 'vermillion', x: 180, y: 430 },
+      { id: 'azure',      x: 410, y: 300 },
+      { id: 'virent',     x: 640, y: 430 },
+      { id: 'phlox',      x: 870, y: 300 },
+      { id: 'magma',      x: 1100, y: 430 }
     ];
     const teams = layout.map(item => Data.TEAMS[item.id]);
-    const R = 112;
+    const R = 118;
 
     function hit(mx, my, cx, cy, r) {
       return Math.hypot(mx - cx, my - cy) < r * 0.92;
     }
 
+    function buildNav() {
+      buildTopBar('SELECT YOUR TEAM', () => E.setScreen(GameSelect()), selectedTeam ? () => E.setScreen(SquadBuilder(mode, selectedTeam)) : null, !!selectedTeam);
+    }
+
     function handleClick(e) {
       const {mx,my} = canvasMouse(e);
       layout.forEach((pos, i) => {
-        if (hit(mx, my, pos.x, pos.y, R)) E.setScreen(SquadBuilder(mode, teams[i].id));
+        if (hit(mx, my, pos.x, pos.y, R)) selectedTeam = teams[i].id;
       });
+      buildNav();
     }
     function handleMove(e) {
       const {mx,my} = canvasMouse(e);
@@ -346,7 +350,7 @@ const Screens = (() => {
     function enter() {
       E.getCanvas().addEventListener('click', handleClick);
       E.getCanvas().addEventListener('mousemove', handleMove);
-      buildTopBar('TEAM SELECT', () => E.setScreen(GameSelect(mode)));
+      buildNav();
     }
     function destroy() {
       E.getCanvas().removeEventListener('click', handleClick);
@@ -360,17 +364,7 @@ const Screens = (() => {
       E.drawDim(ctx, 0.44);
       ctx.save();
       ctx.globalAlpha = fade;
-
-      ctx.font = '30px Iceberg';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillStyle = '#d8e5ed';
-      ctx.shadowColor = 'rgba(0,0,0,.88)';
-      ctx.shadowBlur = 14;
-      ctx.fillText('SELECT YOUR TEAM', 640, 118);
-      ctx.shadowBlur = 0;
-
-      teams.forEach((team, i) => drawTeamHex(ctx, layout[i].x, layout[i].y, R, team, hovered === team.id));
+      teams.forEach((team, i) => drawTeamHex(ctx, layout[i].x, layout[i].y, R, team, hovered === team.id || selectedTeam === team.id));
       ctx.restore();
     }
 
@@ -392,20 +386,20 @@ const Screens = (() => {
         ctx.save();
         hexPath6(ctx, cx, cy, rr - 2);
         ctx.clip();
-        const zoom = hot ? 1.12 : 1.04;
+        const zoom = hot ? 1.14 : 1.06;
         const w = rr * 2.08 * zoom;
         const h = w;
         ctx.drawImage(portrait, cx - w / 2, cy - h * 0.58, w, h);
         ctx.restore();
       }
 
-      ctx.font = `${hot ? 18 : 16}px Iceberg`;
+      ctx.font = `${hot ? 20 : 18}px Iceberg`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillStyle = '#eef6fb';
       ctx.shadowColor = 'rgba(0,0,0,.95)';
       ctx.shadowBlur = 10;
-      ctx.fillText(team.name, cx, cy + rr * 0.73);
+      ctx.fillText(team.name, cx, cy + rr * 0.75);
       ctx.shadowBlur = 0;
       ctx.restore();
     }
@@ -549,7 +543,7 @@ const Screens = (() => {
       const u = Data.UNITS[uid];
       const card = el('div'); card.className = 'squad-card';
 
-      const iconHex = buildHexIcon(unitIconKey(u.id), team.color, false);
+      const iconHex = buildHexIcon(unitIconKey(u.id), team.color, false, 50, 58, 30);
 
       const info = el('div', { flex:'1' });
       const nm = el('div', { fontFamily:'Iceberg,monospace', fontSize:'16px', color:'#f1f7fb', letterSpacing:'1px' });
@@ -577,7 +571,7 @@ const Screens = (() => {
     function buildPUCard(pu, rem, curCount) {
       const card = el('div'); card.className = 'squad-card';
 
-      const iconHex = buildHexIcon(powerupIconKey(pu.id), team.color, true);
+      const iconHex = buildHexIcon(powerupIconKey(pu.id), team.color, true, 50, 58, 28);
 
       const info = el('div', { flex:'1' });
       const nm = el('div', { fontFamily:'Iceberg,monospace', fontSize:'16px', color:'#ffffff', letterSpacing:'1px' });
@@ -599,7 +593,7 @@ const Screens = (() => {
 
     function rosterRow(name, cost, color, onRemove, iconKey, isPowerup) {
       const row = el('div'); row.className = 'roster-row';
-      if (iconKey) row.appendChild(buildHexIcon(iconKey, color, isPowerup, 42, 48, 24));
+      if (iconKey) row.appendChild(buildHexIcon(iconKey, color, isPowerup, 40, 46, 22));
       const rm  = txBtn('−', onRemove); rm.style.cssText += ';padding:2px 9px;font-size:15px;';
       const nm  = el('div', { fontFamily:'Iceberg,monospace', fontSize:'12px', color, flex:'1', letterSpacing:'1px' });
       nm.textContent = name;
@@ -796,7 +790,7 @@ const Screens = (() => {
 
       state.playerPowerups.forEach((pid) => {
         const ico = el('div'); ico.className = 'pu-icon';
-        ico.appendChild(buildHexIcon(powerupIconKey(pid), state.playerTeam.color, true, 44, 50, 24));
+        ico.appendChild(buildHexIcon(powerupIconKey(pid), state.playerTeam.color, true, 38, 44, 20));
         ico.title = Data.POWERUPS[pid].name;
         const active = state.puData && state.puData.puId === pid && state.puState !== Game.PUSTATE.NONE;
         if (active) ico.classList.add('active');
@@ -826,7 +820,7 @@ const Screens = (() => {
 
       state.aiPowerups.forEach(pid => {
         const ico = el('div'); ico.className = 'pu-icon enemy';
-        ico.appendChild(buildHexIcon(powerupIconKey(pid), state.aiTeam.color, true, 44, 50, 24));
+        ico.appendChild(buildHexIcon(powerupIconKey(pid), state.aiTeam.color, true, 38, 44, 20));
         ico.title = Data.POWERUPS[pid].name;
         puBar.appendChild(ico);
       });
@@ -1052,17 +1046,28 @@ const Screens = (() => {
     parent.appendChild(h);
   }
 
-  function buildTopBar(title, onBack) {
+  function buildTopBar(title, onBack, onReady = null, readyEnabled = false) {
     const ui = E.getUI();
     ui.innerHTML = '';
     const nav = el('div', {
-      position:'absolute', top:'0', left:'0', right:'0', height:'64px',
-      display:'flex', alignItems:'center', justifyContent:'flex-end',
-      padding:'0 24px', background:'transparent', pointerEvents:'none'
+      position:'absolute', top:'0', left:'0', right:'0', height:'48px',
+      background:'rgba(3,10,18,.95)', borderBottom:'1px solid #162434',
+      display:'flex', alignItems:'center', padding:'0 24px', gap:'16px'
     });
+    const titleEl = el('div', {
+      fontFamily:'Iceberg,monospace', fontSize:'19px', letterSpacing:'4px', color:'#e7f2f8'
+    });
+    titleEl.textContent = title;
+    const spacer = el('div', { flex:'1' });
     const backBtn = txBtn('BACK', onBack);
-    backBtn.style.cssText += ';pointer-events:auto;font-size:11px;padding:8px 20px;';
-    nav.appendChild(backBtn);
+    if (onReady) {
+      const readyBtn = txBtn('READY', onReady);
+      readyBtn.classList.add('primary');
+      if (!readyEnabled) readyBtn.disabled = true;
+      nav.append(titleEl, spacer, backBtn, readyBtn);
+    } else {
+      nav.append(titleEl, spacer, backBtn);
+    }
     ui.appendChild(nav);
   }
 
@@ -1078,25 +1083,28 @@ const Screens = (() => {
     ctx.closePath();
   }
 
-  function buildHexIcon(iconKey, accentColor, isPowerup, w = 58, h = 66, iconMax = null) {
+  function buildHexIcon(iconKey, accentColor, isPowerup, w = 50, h = 58, iconMax = null) {
+    const ratioW = Math.round(h * 0.8660254);
+    if (Math.abs((w / h) - 0.8660254) > 0.04) w = ratioW;
     const wrap = el('div', {
       width:`${w}px`, height:`${h}px`, flexShrink:'0', position:'relative'
     });
+    const clip = 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)';
     const outline = el('div', {
       position:'absolute', inset:'0',
-      clipPath:'polygon(50% 0%, 93.3% 25%, 93.3% 75%, 50% 100%, 6.7% 75%, 6.7% 25%)',
+      clipPath: clip,
       background: accentColor,
       boxShadow:`0 0 10px ${accentColor}55`
     });
     const inner = el('div', {
       position:'absolute', left:'2px', top:'2px', right:'2px', bottom:'2px',
-      clipPath:'polygon(50% 0%, 93.3% 25%, 93.3% 75%, 50% 100%, 6.7% 75%, 6.7% 25%)',
+      clipPath: clip,
       background: isPowerup ? 'rgba(16,24,34,.95)' : 'rgba(8,18,28,.92)',
       display:'flex', alignItems:'center', justifyContent:'center', overflow:'hidden'
     });
     const icon = E.getImage(iconKey);
     if (icon) {
-      const maxSide = iconMax || (isPowerup ? Math.min(w, h) * 0.50 : Math.min(w, h) * 0.58);
+      const maxSide = iconMax || (isPowerup ? Math.min(w, h) * 0.52 : Math.min(w, h) * 0.60);
       const scale = Math.min(maxSide / icon.width, maxSide / icon.height);
       const img = el('img', {
         width:`${Math.round(icon.width * scale)}px`,

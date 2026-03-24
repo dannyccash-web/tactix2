@@ -194,7 +194,7 @@ const Game = (() => {
     const u = state.selectedUnit;
     if (!u) return;
 
-    if (state.phase === PHASE.MOVE && !u.movedThisTurn && !u.stunned) {
+    if (state.phase === PHASE.MOVE && !u.stunned) {
       const maxSteps = Math.min(u.speed - u.speedUsedThisTurn, state.movePool);
       const reach = Board.reachable(u.col, u.row, maxSteps, (c, r) => {
         return !!unitAt(c, r);
@@ -623,11 +623,16 @@ const Game = (() => {
     if (state.phase === PHASE.OVER) return;
 
     // Delegate to AI module
-    AI.takeTurn(state, {
-      liveUnits, unitAt, moveUnit: aiMoveUnit, attackTarget,
-      removePowerup, applyDamage, triggerMine, logMsg,
-      checkWin, endGame, findPath: Board.findPath
-    });
+    try {
+      AI.takeTurn(state, {
+        liveUnits, unitAt, moveUnit: aiMoveUnit, attackTarget,
+        removePowerup, applyDamage, triggerMine, logMsg,
+        checkWin, endGame, findPath: Board.findPath
+      });
+    } catch (err) {
+      console.error('AI turn failed', err);
+      logMsg('AI turn recovered from an error');
+    }
   }
 
   // AI version of move with visual step-through animation
@@ -751,10 +756,17 @@ const Game = (() => {
 
     // Soldier sprite is 1024×1536 — a single full-body soldier
     // Draw so feet are just below hex center, scaled to fit within 1.8× hex radius
-    const sw = Board.HEX_R * 2.0;    // display width
+    const sw = Board.HEX_R * 2.12;    // display width
     const sh = sw * (1536 / 1024);   // maintain aspect ratio → ~2.7 × HEX_R tall
     const sx = x - sw / 2;
-    const sy = y - sh + Board.HEX_R * 0.76;  // feet sit near hex center
+    const sy = y - sh + Board.HEX_R * 0.80;  // feet sit near hex center
+
+    if (state.selectedUnit && state.selectedUnit.id === unit.id) {
+      Board.drawHexPath(ctx, x, y, Board.HEX_R * 0.92);
+      ctx.strokeStyle = unit.team.color || '#ffff80';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+    }
 
     ctx.save();
     ctx.globalAlpha = unit.stunned ? 0.5 : 1;
@@ -786,20 +798,13 @@ const Game = (() => {
       ctx.restore();
     }
 
-    // Selected unit glow
-    if (state.selectedUnit && state.selectedUnit.id === unit.id) {
-      Board.drawHexPath(ctx, x, y, Board.HEX_R * 0.92);
-      ctx.strokeStyle = unit.team.color || '#ffff80';
-      ctx.lineWidth = 2.5;
-      ctx.stroke();
-    }
   }
 
   function drawHPBar(ctx, cx, cy, unit) {
     const w = Board.HEX_R * 1.4;
     const h = 4;
     const x = cx - w / 2;
-    const y = cy + Board.HEX_R * 0.48;
+    const y = cy - Board.HEX_R * 0.14;
 
     ctx.fillStyle = 'rgba(0,0,0,0.7)';
     ctx.fillRect(x, y, w, h);
