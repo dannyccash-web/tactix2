@@ -7,14 +7,13 @@ const Board = (() => {
   const COLS = Data.BOARD_COLS;   // 20
   const ROWS = Data.BOARD_ROWS;   // 10
 
-  // Pointy-top hexes with an isometric-style presentation.
+  // Flat-top hexes. HEX_R is circumradius.
+  // Board is sheared 30° then scaled vertically to 75%.
   const HEX_R    = 28;
-  const HEX_W    = Math.sqrt(3) * HEX_R;
+  const HEX_W    = Math.sqrt(3) * HEX_R;   // center-to-center horizontal
   const HEX_H    = 2 * HEX_R;
-  const COL_STEP = HEX_R * 1.5;
-  const ROW_STEP = HEX_W;
-  const SHEAR    = 0.42;
-  const SCALE_Y  = 0.72;
+  const SHEAR    = 0.46;
+  const SCALE_Y  = 0.82;
 
   // Gameplay area: canvas 1280×720, top bar 48px, bottom bar 52px
   // Usable: 1280 × 620 starting at y=48
@@ -24,10 +23,15 @@ const Board = (() => {
   const GAME_BOTTOM = 52;
   const GAME_H      = 720 - GAME_TOP - GAME_BOTTOM;   // 620
 
+  // Pre-compute board extents at (0,0) origin
+  const _raw19_0 = { x: 19 * HEX_W, y: 0 };
+  const _raw0_9  = { x: 0, y: 9 * HEX_R * 1.5 };
+  const _raw19_9 = { x: 19 * HEX_W, y: 9 * HEX_R * 1.5 };
+
   // After shear+scale, the four corners:
   function _corner(col, row) {
-    const rx = col * COL_STEP;
-    const ry = row * ROW_STEP + (col % 2 === 0 ? 0 : ROW_STEP / 2);
+    const rx = col * HEX_W;
+    const ry = row * HEX_R * 1.5 + ((col % 2) ? HEX_R * 0.75 : 0);
     return { x: rx + ry * SHEAR, y: ry * SCALE_Y };
   }
 
@@ -176,8 +180,8 @@ const Board = (() => {
 
   // ── Screen-space transform ────────────────────────────────
   function hexCenter(col, row) {
-    const rx = col * COL_STEP;
-    const ry = row * ROW_STEP + (col % 2 === 0 ? 0 : ROW_STEP / 2);
+    const rx = col * HEX_W;
+    const ry = row * HEX_R * 1.5 + ((col % 2) ? HEX_R * 0.75 : 0);
     return {
       x: ORIGIN_X + rx + ry * SHEAR,
       y: ORIGIN_Y + ry * SCALE_Y
@@ -186,12 +190,13 @@ const Board = (() => {
 
   // Pointy-top hex path
   function drawHexPath(ctx, cx, cy, r) {
-    r = r || HEX_R;
+    const rx = r || HEX_R;
+    const ry = rx * 0.72;
     ctx.beginPath();
     for (let i = 0; i < 6; i++) {
       const a = (Math.PI / 3) * i - Math.PI / 6;
-      const x = cx + r * Math.cos(a);
-      const y = cy + r * Math.sin(a);
+      const x = cx + rx * Math.cos(a);
+      const y = cy + ry * Math.sin(a);
       i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
     }
     ctx.closePath();

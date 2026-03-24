@@ -40,20 +40,26 @@ const TactixEngine = (() => {
     { key: 'vermillion-soldier',src: 'assets/soldiers/vermillion-soldier.png' },
     { key: 'virent-soldier',    src: 'assets/soldiers/virent-soldier.png' },
     { key: 'magma_soldier',     src: 'assets/soldiers/magma_soldier.png' },
+    // UI icons
+    { key: 'melee_icon',              src: 'assets/icons/melee_icon.png' },
+    { key: 'capture_the_flag_icon',   src: 'assets/icons/capture_the_flag_icon.png' },
+    { key: 'infantry_icon',           src: 'assets/icons/infantry_icon.png' },
+    { key: 'sniper_icon',             src: 'assets/icons/sniper_icon.png' },
+    { key: 'grenadier_icon',          src: 'assets/icons/grenaider_icon.png' },
+    { key: 'elite_icon',              src: 'assets/icons/elite_icon.png' },
+    { key: 'shock_trooper_icon',      src: 'assets/icons/shock_trooper_icon.png' },
+    { key: 'slasher_icon',            src: 'assets/icons/slasher_icon.png' },
+    { key: 'assassin_icon',           src: 'assets/icons/assassin_icon.png' },
+    { key: 'acid_thrower_icon',       src: 'assets/icons/acid_thrower_icon.png' },
+    { key: 'med_pack_icon',           src: 'assets/icons/med_pack_icon.png' },
+    { key: 'mine_icon',               src: 'assets/icons/mine_icon.png' },
+    { key: 'teleporter_icon',         src: 'assets/icons/teleporter_icon.png' },
+    { key: 'fire_caller_icon',        src: 'assets/icons/fire_caller_icon.png' },
     // Backgrounds
     { key: 'bg1', src: 'assets/backgrounds/tactix_background.png' },
     { key: 'bg2', src: 'assets/backgrounds/tactix_background_2.png' },
     // Logo
-    { key: 'logo', src: 'assets/logo/tactix_logo.png' },
-    // UI icons
-    { key: 'icon_melee', src: 'assets/icons/melee_icon.svg' },
-    { key: 'icon_ctf', src: 'assets/icons/capture_the_flag_icon.svg' },
-    { key: 'icon_infantry', src: 'assets/icons/infantry_icon.svg' },
-    { key: 'icon_sniper', src: 'assets/icons/sniper_icon.svg' },
-    { key: 'icon_grenadier', src: 'assets/icons/grenaider_icon.svg' },
-    { key: 'icon_med_pack', src: 'assets/icons/med_pack_icon.svg' },
-    { key: 'icon_mine', src: 'assets/icons/mine_icon.svg' },
-    { key: 'icon_teleporter', src: 'assets/icons/teleporter_icon.svg' }
+    { key: 'logo', src: 'assets/logo/tactix_logo.png' }
   ];
 
   const AUDIO_MANIFEST = [

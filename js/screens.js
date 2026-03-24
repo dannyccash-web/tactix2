@@ -47,16 +47,15 @@ const Screens = (() => {
       .phase-btn.active { background:rgba(255,255,255,.1); }
 
       .pu-icon {
-        width:38px; height:38px;
+        width:34px; height:34px; border-radius:50%;
         border:1.5px solid #2e4858;
         display:flex; align-items:center; justify-content:center;
         cursor:pointer; font-size:14px; color:#90b8c8;
         background:rgba(8,20,30,.85);
-        transition:border-color .12s,background .12s,transform .12s;
+        transition:border-color .12s,background .12s;
         user-select:none;
-        clip-path:polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
       }
-      .pu-icon:hover  { border-color:#6aaac8; background:rgba(20,55,80,.8); transform:scale(1.04); }
+      .pu-icon:hover  { border-color:#6aaac8; background:rgba(20,55,80,.8); }
       .pu-icon.active { border-color:#f0e040; background:rgba(50,42,0,.8); color:#f0e040; }
       .pu-icon.enemy  { opacity:.6; cursor:default; }
 
@@ -88,11 +87,6 @@ const Screens = (() => {
         transition:background .1s;
       }
       .squad-card:hover { background:rgba(20,50,78,.7); }
-      .tx-hex-icon {
-        clip-path:polygon(50% 0%, 93% 25%, 93% 75%, 50% 100%, 7% 75%, 7% 25%);
-        background:rgba(10,20,30,.92);
-      }
-      .tx-svg-icon { width:22px; height:22px; object-fit:contain; display:block; }
       .roster-row {
         display:flex; align-items:center; gap:10px;
         padding:6px 10px; margin-bottom:5px;
@@ -129,7 +123,7 @@ const Screens = (() => {
 
     function render(ctx) {
       // Full-bleed background
-      E.drawBackground(ctx, 'bg2', 1);
+      E.drawBackground(ctx, 'bg1', 1);
 
       ctx.save();
       ctx.globalAlpha = fade;
@@ -137,30 +131,28 @@ const Screens = (() => {
       // Logo centered
       const logo = E.getImage('logo');
       if (logo) {
-        const lw = 580;
+        const lw = 720;
         const lh = logo.height * (lw / logo.width);
-        ctx.drawImage(logo, (1280 - lw) / 2, 155, lw, lh);
+        ctx.drawImage(logo, (1280 - lw) / 2, 112, lw, lh);
       }
 
       // "TURN-BASED COMBAT" subtitle
-      ctx.font = '24px Iceberg';
+      ctx.font = '28px Iceberg';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillStyle = '#1f2830';
-      ctx.shadowColor = 'rgba(255,255,255,.18)';
-      ctx.shadowBlur = 6;
-      ctx.fillText('TURN-BASED COMBAT', 640, 368);
-      ctx.shadowBlur = 0;
+      ctx.fillStyle = '#567286';
+      ctx.letterSpacing = '4px';
+      ctx.fillText('TURN-BASED COMBAT', 640, 392);
 
       // START button (styled box like the guide)
-      const bw = 160, bh = 40;
-      const bx = 640 - bw/2, by = 430;
+      const bw = 220, bh = 56;
+      const bx = 640 - bw/2, by = 462;
       ctx.fillStyle = 'rgba(40,60,75,.85)';
       ctx.fillRect(bx, by, bw, bh);
       ctx.strokeStyle = '#5a8898';
       ctx.lineWidth = 1.5;
       ctx.strokeRect(bx, by, bw, bh);
-      ctx.font = '16px Iceberg';
+      ctx.font = '24px Iceberg';
       ctx.fillStyle = '#c8dce8';
       ctx.fillText('START', 640, by + bh/2);
 
@@ -215,34 +207,40 @@ const Screens = (() => {
       ctx.fillText('CHOOSE YOUR GAME', 640, 175);
       ctx.shadowBlur=0;
 
-      drawModeHex(ctx, MELEE_CX, CARD_CY, CARD_R, 'icon_melee', 'MELEE', hovered==='melee');
-      drawModeHex(ctx, CTF_CX,   CARD_CY, CARD_R, 'icon_ctf', 'CAPTURE THE FLAG', hovered==='ctf');
+      drawModeHex(ctx, MELEE_CX, CARD_CY, CARD_R, 'melee_icon', 'MELEE', hovered==='melee');
+      drawModeHex(ctx, CTF_CX,   CARD_CY, CARD_R, 'capture_the_flag_icon', 'CAPTURE THE FLAG', hovered==='ctf');
 
       ctx.restore();
     }
 
     function drawModeHex(ctx, cx, cy, r, iconKey, label, hot) {
       ctx.save();
-      hexPath6(ctx, cx, cy, hot ? r + 4 : r);
-      ctx.fillStyle = hot ? 'rgba(30,65,95,.82)' : 'rgba(12,26,40,.74)';
+      hexPath6(ctx, cx, cy, r);
+      ctx.fillStyle = hot ? 'rgba(30,65,95,.82)' : 'rgba(12,26,40,.78)';
       ctx.fill();
       if (hot) { ctx.shadowColor='rgba(80,160,210,.6)'; ctx.shadowBlur=22; }
-      ctx.strokeStyle = hot ? '#6aacca' : '#557f99';
-      ctx.lineWidth = hot ? 2.4 : 2;
+      ctx.strokeStyle = hot ? '#5aaccc' : '#2a4a60';
+      ctx.lineWidth = hot ? 2.5 : 1.75;
       ctx.stroke();
       ctx.shadowBlur=0;
 
       const icon = E.getImage(iconKey);
       if (icon) {
-        const iw = r * 0.95;
-        const ih = r * 0.95;
-        ctx.globalAlpha = hot ? 1 : 0.9;
-        ctx.drawImage(icon, cx - iw/2, cy - ih/2 - 14, iw, ih);
+        const iw = 116;
+        const ih = 116;
+        ctx.save();
+        hexPath6(ctx, cx, cy, r - 10);
+        ctx.clip();
+        ctx.globalAlpha = hot ? 1 : 0.96;
+        ctx.drawImage(icon, cx - iw / 2, cy - 88, iw, ih);
+        ctx.restore();
       }
 
-      ctx.font='16px Iceberg'; ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillStyle = hot ? '#fff' : '#d8e6ef';
-      ctx.fillText(label, cx, cy + 64);
+      ctx.font='18px Iceberg';
+      ctx.textAlign='center';
+      ctx.textBaseline='middle';
+      ctx.fillStyle = hot ? '#fff' : '#b8d4e0';
+      ctx.fillText(label, cx, cy + 54);
       ctx.restore();
     }
 
@@ -260,13 +258,13 @@ const Screens = (() => {
     // Virent(top-left), Magma(top-right), Azure(mid-left), Phlox(center), Vermillion(mid-right)
     const teams = Object.values(Data.TEAMS);
     const positions = [
-      { x: 220, y: 390 },
-      { x: 430, y: 390 },
-      { x: 640, y: 390 },
-      { x: 850, y: 390 },
-      { x: 1060, y: 390 },
+      { x: 330, y: 310 },   // Virent
+      { x: 760, y: 295 },   // Magma  (visually between row1 and row2)
+      { x: 182, y: 470 },   // Azure
+      { x: 548, y: 450 },   // Phlox
+      { x: 950, y: 450 },   // Vermillion
     ];
-    const R = 84;
+    const R = 100;
 
     function handleClick(e) {
       const {mx,my} = canvasMouse(e);
@@ -322,25 +320,25 @@ const Screens = (() => {
       const portrait = E.getImage(team.portrait);
       ctx.save();
 
-      const rr = hot ? r + 4 : r;
-      hexPath6(ctx, cx, cy, rr);
-      ctx.fillStyle = `rgba(8,18,28,.78)`;
+      // Hex background
+      hexPath6(ctx, cx, cy, hot ? r+4 : r);
+      ctx.fillStyle = `rgba(8,18,28,.75)`;
       ctx.fill();
       if (hot) {
         ctx.shadowColor = team.glowColor || team.color;
         ctx.shadowBlur = 24;
       }
-      ctx.strokeStyle = team.color;
-      ctx.lineWidth = hot ? 3 : 2;
+      ctx.strokeStyle = hot ? team.color : '#243444';
+      ctx.lineWidth = hot ? 2.5 : 1.5;
       ctx.stroke();
       ctx.shadowBlur = 0;
 
+      // Portrait clipped inside hex
       if (portrait) {
         ctx.save();
-        hexPath6(ctx, cx, cy, rr);
+        hexPath6(ctx, cx, cy, hot ? r+4 : r);
         ctx.clip();
-        const zoom = hot ? 1.08 : 1.0;
-        const sz = rr * 2.1 * zoom;
+        const sz = (hot ? r+4 : r) * 2.1;
         ctx.drawImage(portrait, cx - sz/2, cy - sz * 0.6, sz, sz);
         ctx.restore();
       }
@@ -403,7 +401,7 @@ const Screens = (() => {
 
       const pts = el('div', {
         fontFamily:'RobotoMono,monospace', fontSize:'12px',
-        color: rem > 0 ? '#e7c84c' : '#c84444', marginLeft:'auto'
+        color: rem >= 0 ? '#f0d34f' : '#c84444', marginLeft:'auto'
       });
       pts.textContent = `${cost} / ${Data.SQUAD_BUDGET} PTS`;
 
@@ -445,10 +443,10 @@ const Screens = (() => {
       });
 
       const squadHdr = el('div', {
-        fontFamily:'Iceberg,monospace', fontSize:'12px', letterSpacing:'3px',
-        color:'#4a6878', marginBottom:'14px', display:'flex', justifyContent:'space-between'
+        fontFamily:'Iceberg,monospace', fontSize:'16px', letterSpacing:'3px',
+        color:'#d6e6ef', marginBottom:'14px', display:'flex', justifyContent:'space-between'
       });
-      squadHdr.innerHTML = `<span>YOUR SQUAD</span><span style="color:${rem>0?'#e7c84c':'#c84444'}">${cost}/${Data.SQUAD_BUDGET} PTS</span>`;
+      squadHdr.innerHTML = `<span>YOUR SQUAD</span><span style="color:${rem>=0?'#f0d34f':'#c84444'}">${cost}/${Data.SQUAD_BUDGET} PTS</span>`;
       right.appendChild(squadHdr);
 
       if (!roster.length && !powerups.length) {
@@ -494,27 +492,12 @@ const Screens = (() => {
       const u = Data.UNITS[uid];
       const card = el('div'); card.className = 'squad-card';
 
-      const iconHex = el('div', {
-        width:'40px', height:'40px', flexShrink:'0',
-        border:`1.5px solid ${team.color}`,
-        display:'flex', alignItems:'center', justifyContent:'center'
-      });
-      iconHex.classList.add('tx-hex-icon');
-      const unitIcon = unitIconImage(u.id);
-      if (unitIcon) {
-        const img = el('img', { width:'22px', height:'22px', objectFit:'contain' }, { src: unitIcon, alt: u.name });
-        img.className = 'tx-svg-icon';
-        iconHex.appendChild(img);
-      } else {
-        iconHex.textContent = unitIconChar(u.id);
-        iconHex.style.fontSize = '19px';
-        iconHex.style.color = team.color;
-      }
+      const iconHex = buildHexIcon(unitIconKey(u.id), team.color, false);
 
       const info = el('div', { flex:'1' });
-      const nm = el('div', { fontFamily:'Iceberg,monospace', fontSize:'13px', color:'#b8ccd8', letterSpacing:'1px' });
+      const nm = el('div', { fontFamily:'Iceberg,monospace', fontSize:'15px', color:'#d6e6ef', letterSpacing:'1px' });
       nm.textContent = u.name;
-      const st = el('div', { fontFamily:'RobotoMono,monospace', fontSize:'9px', color:'#4a6878', marginTop:'2px' });
+      const st = el('div', { fontFamily:'RobotoMono,monospace', fontSize:'9px', color:'#7e97a6', marginTop:'2px' });
       st.textContent = `SPEED ${u.speed}  RANGE ${u.range}  ATK +${u.atk}  DEF +${u.def}  DMG ${u.dmg}  HP ${u.hp}`;
       info.append(nm, st);
       if (u.special) {
@@ -523,7 +506,7 @@ const Screens = (() => {
         info.appendChild(sp);
       }
 
-      const costEl = el('div', { fontFamily:'Iceberg,monospace', fontSize:'15px', color: u.cost<=rem?'#e7c84c':'#c84444', flexShrink:'0' });
+      const costEl = el('div', { fontFamily:'Iceberg,monospace', fontSize:'15px', color: u.cost<=rem?'#f0d34f':'#c84444', flexShrink:'0' });
       costEl.textContent = u.cost + 'pts.';
 
       const addBtn = txBtn('+', () => addUnit(uid));
@@ -537,31 +520,16 @@ const Screens = (() => {
     function buildPUCard(pu, rem, curCount) {
       const card = el('div'); card.className = 'squad-card';
 
-      const iconHex = el('div', {
-        width:'40px', height:'40px', flexShrink:'0',
-        border:`1.5px solid ${team.color}`,
-        display:'flex', alignItems:'center', justifyContent:'center'
-      });
-      iconHex.classList.add('tx-hex-icon');
-      const puIcon = powerupIconImage(pu.id);
-      if (puIcon) {
-        const img = el('img', { width:'20px', height:'20px', objectFit:'contain' }, { src: puIcon, alt: pu.name });
-        img.className = 'tx-svg-icon';
-        iconHex.appendChild(img);
-      } else {
-        iconHex.textContent = puIconChar(pu.id);
-        iconHex.style.fontSize = '16px';
-        iconHex.style.color = '#ffffff';
-      }
+      const iconHex = buildHexIcon(powerupIconKey(pu.id), team.color, true);
 
       const info = el('div', { flex:'1' });
-      const nm = el('div', { fontFamily:'Iceberg,monospace', fontSize:'13px', color:'#ffffff', letterSpacing:'1px' });
+      const nm = el('div', { fontFamily:'Iceberg,monospace', fontSize:'15px', color:'#ffffff', letterSpacing:'1px' });
       nm.textContent = pu.name;
       const desc = el('div', { fontFamily:'RobotoMono,monospace', fontSize:'9px', color:'#ffffff', marginTop:'2px' });
       desc.textContent = pu.desc;
       info.append(nm, desc);
 
-      const costEl = el('div', { fontFamily:'Iceberg,monospace', fontSize:'15px', color: pu.cost<=rem?'#e7c84c':'#c84444', flexShrink:'0' });
+      const costEl = el('div', { fontFamily:'Iceberg,monospace', fontSize:'15px', color: pu.cost<=rem?'#f0d34f':'#c84444', flexShrink:'0' });
       costEl.textContent = pu.cost + 'pts.';
 
       const addBtn = txBtn('+', () => addPowerup(pu.id));
@@ -771,16 +739,15 @@ const Screens = (() => {
 
       state.playerPowerups.forEach((pid) => {
         const ico = el('div'); ico.className = 'pu-icon';
-        ico.style.borderColor = Data.TEAMS[teamId].color;
-        ico.title = Data.POWERUPS[pid].name;
-        const pui = powerupIconImage(pid);
-        if (pui) {
-          const img = el('img', { width:'18px', height:'18px', objectFit:'contain' }, { src: pui, alt: Data.POWERUPS[pid].name });
-          img.className = 'tx-svg-icon';
-          ico.appendChild(img);
-        } else {
-          ico.textContent = puIconChar(pid);
+        const puImg = E.getImage(powerupIconKey(pid));
+        if (puImg) {
+          const im = el('img', { src: puImg.src, draggable:false });
+          im.style.width = '18px';
+          im.style.height = '18px';
+          im.style.objectFit = 'contain';
+          ico.appendChild(im);
         }
+        ico.title = Data.POWERUPS[pid].name;
         const active = state.puData && state.puData.puId === pid && state.puState !== Game.PUSTATE.NONE;
         if (active) ico.classList.add('active');
         if (playerTurn) {
@@ -1029,8 +996,8 @@ const Screens = (() => {
 
   function sectionHeader(parent, text, extraStyle) {
     const h = el('div', Object.assign({
-      fontFamily:'Iceberg,monospace', fontSize:'11px', letterSpacing:'3px',
-      color:'#3a5868', marginBottom:'10px', paddingBottom:'6px',
+      fontFamily:'Iceberg,monospace', fontSize:'14px', letterSpacing:'3px',
+      color:'#9fb6c4', marginBottom:'10px', paddingBottom:'6px',
       borderBottom:'1px solid #121e2c'
     }, extraStyle || {}));
     h.textContent = text;
@@ -1050,16 +1017,47 @@ const Screens = (() => {
     ui.appendChild(nav);
   }
 
-  // Pointy-top hexagon path for UI cards
+  // Flat-top hexagon path for UI cards
   function hexPath6(ctx, cx, cy, r) {
     ctx.beginPath();
     for (let i = 0; i < 6; i++) {
-      const a = (Math.PI / 3) * i - Math.PI / 2;
+      const a = (Math.PI / 3) * i;
       const x = cx + r * Math.cos(a);
       const y = cy + r * Math.sin(a);
       i === 0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
     }
     ctx.closePath();
+  }
+
+
+  function buildHexIcon(iconKey, accentColor, isPowerup) {
+    const wrap = el('div', {
+      width:'62px', height:'68px', flexShrink:'0', position:'relative',
+      clipPath:'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
+      background: accentColor,
+      boxShadow:`0 0 0 1px ${accentColor}, 0 0 14px ${accentColor}44`
+    });
+    const inner = el('div', {
+      position:'absolute', left:'2px', top:'2px', right:'2px', bottom:'2px',
+      clipPath:'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)',
+      background:isPowerup ? 'rgba(18,24,34,.95)' : 'rgba(8,18,28,.92)',
+      display:'flex', alignItems:'center', justifyContent:'center'
+    });
+    const icon = E.getImage(iconKey);
+    if (icon) {
+      const img = el('img', { src: icon.src, draggable:false });
+      img.style.width = '34px';
+      img.style.height = '34px';
+      img.style.objectFit = 'contain';
+      img.style.filter = isPowerup ? 'drop-shadow(0 0 8px rgba(255,255,255,.2))' : 'none';
+      inner.appendChild(img);
+    } else {
+      const fallback = el('div', { fontFamily:'Iceberg,monospace', fontSize:'20px', color:'#fff' });
+      fallback.textContent = isPowerup ? '+' : '•';
+      inner.appendChild(fallback);
+    }
+    wrap.appendChild(inner);
+    return wrap;
   }
 
   function canvasMouse(e) {
@@ -1070,38 +1068,25 @@ const Screens = (() => {
     };
   }
 
-  function unitIconImage(id) {
+  function unitIconKey(id) {
     const m = {
-      infantry:'icon_infantry',
-      sniper:'icon_sniper',
-      elite:'icon_infantry',
-      grenadier:'icon_grenadier',
-      shock_trooper:'icon_infantry',
-      slasher:'icon_infantry',
-      assassin:'icon_sniper',
-      acid_thrower:'icon_grenadier',
-      grunt:'icon_infantry',
-      sharpshooter:'icon_sniper',
-      fire_caller:'icon_grenadier'
+      infantry:'infantry_icon',
+      sniper:'sniper_icon',
+      elite:'elite_icon',
+      grenadier:'grenadier_icon',
+      shock_trooper:'shock_trooper_icon',
+      slasher:'slasher_icon',
+      assassin:'assassin_icon',
+      acid_thrower:'acid_thrower_icon',
+      grunt:'infantry_icon',
+      sharpshooter:'sniper_icon',
+      fire_caller:'fire_caller_icon'
     };
-    const key = m[id];
-    const img = key ? E.getImage(key) : null;
-    return img ? img.src : null;
+    return m[id] || 'infantry_icon';
   }
-  function powerupIconImage(id) {
-    const m = { med_pack:'icon_med_pack', mine:'icon_mine', teleporter:'icon_teleporter' };
-    const key = m[id];
-    const img = key ? E.getImage(key) : null;
-    return img ? img.src : null;
-  }
-  function unitIconChar(id) {
-    const m = {infantry:'⬡',sniper:'◎',elite:'★',grenadier:'⬡',
-                shock_trooper:'⬡',slasher:'⬡',assassin:'◎',
-                acid_thrower:'⬡',grunt:'⬡',sharpshooter:'◎',fire_caller:'⬡'};
-    return m[id] || '⬡';
-  }
-  function puIconChar(id) {
-    return id==='med_pack' ? '✚' : id==='mine' ? '✦' : id==='teleporter' ? '⟳' : '?';
+  function powerupIconKey(id) {
+    const m = { med_pack:'med_pack_icon', mine:'mine_icon', teleporter:'teleporter_icon' };
+    return m[id] || 'med_pack_icon';
   }
   function specialLabel(s) {
     const m = {splash:'SPLASH DAMAGE',stun:'STUN ON HIT',poison:'POISON ON HIT',

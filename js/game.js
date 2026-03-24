@@ -711,7 +711,7 @@ const Game = (() => {
     ctx.save();
     ctx.globalAlpha = unit.stunned ? 0.5 : 1;
     if (unit.stunned) ctx.filter = 'brightness(2.2) saturate(0)';
-    if (unit.side === 'ai') {
+    if (unit.side === 'enemy') {
       ctx.translate(x, 0);
       ctx.scale(-1, 1);
       ctx.drawImage(spriteImg, -sw / 2, sy, sw, sh);
