@@ -229,7 +229,14 @@ const Board = (() => {
     ctx.restore();
   }
 
-  function render(ctx, highlights = {}, mines = []) {
+  function render(ctx, highlights = {}, mines = [], playerTeamColor, aiTeamColor, mode) {
+    // Draw base corner overlays always in CTF
+    const baseTileSet = new Set();
+    if (mode === 'ctf') {
+      PLAYER_BASE.forEach(b => baseTileSet.add(idx(b.col, b.row)));
+      AI_BASE.forEach(b => baseTileSet.add(idx(b.col, b.row)));
+    }
+
     for (let row = 0; row < ROWS; row++) {
       for (let col = 0; col < COLS; col++) {
         const i = idx(col, row);
@@ -249,10 +256,22 @@ const Board = (() => {
           drawTextureTile(ctx, x, y, HEX_R, 'dirt_texture', angle);
         }
 
-        drawHexPath(ctx, x, y, HEX_R);
-        ctx.strokeStyle = type === TILE.OBSTACLE ? '#4f5e66' : '#61767f';
-        ctx.lineWidth = 1;
-        ctx.stroke();
+        // Always draw base corner markers in CTF
+        if (mode === 'ctf' && baseTileSet.has(i)) {
+          const isPlayerBase = PLAYER_BASE.some(b => b.col === col && b.row === row);
+          const baseColor = isPlayerBase ? (playerTeamColor || '#3a8afa') : (aiTeamColor || '#fa5050');
+          drawHexPath(ctx, x, y, HEX_R);
+          ctx.fillStyle = withAlpha(baseColor, 0.18);
+          ctx.fill();
+          ctx.strokeStyle = baseColor;
+          ctx.lineWidth = 2.5;
+          ctx.stroke();
+        } else {
+          drawHexPath(ctx, x, y, HEX_R);
+          ctx.strokeStyle = type === TILE.OBSTACLE ? '#4f5e66' : '#61767f';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
 
         const rawHl = highlights[i];
         const hl = typeof rawHl === 'string' ? { type: rawHl } : rawHl;
@@ -262,9 +281,9 @@ const Board = (() => {
           const hlStyles = {
             move:         { fill: withAlpha(moveStroke, 0.28), stroke: moveStroke, lw:2 },
             attack:       { fill:'rgba(250,60,60,0.28)',  stroke:'rgba(250,60,60,0.88)',  lw:2 },
-            selected:     { fill:'rgba(255,255,80,0.18)', stroke:'rgba(255,255,80,0.92)', lw:2.5 },
-            base_player:  { fill:'rgba(58,138,250,0.14)', stroke:'rgba(58,138,250,0.45)', lw:1.5 },
-            base_ai:      { fill:'rgba(250,80,80,0.14)',  stroke:'rgba(250,80,80,0.45)',  lw:1.5 },
+            selected:     { fill: withAlpha(hl.color || '#ffff50', 0.18), stroke: hl.color || 'rgba(255,255,80,0.92)', lw:2.5 },
+            base_player:  { fill: withAlpha(playerTeamColor || '#3a8afa', 0.22), stroke: playerTeamColor || 'rgba(58,138,250,0.45)', lw:2 },
+            base_ai:      { fill: withAlpha(aiTeamColor || '#fa5050', 0.22),  stroke: aiTeamColor || 'rgba(250,80,80,0.45)',  lw:2 },
             flag:         { fill:'rgba(255,230,50,0.32)', stroke:'rgba(255,230,50,0.90)', lw:2.5 },
             teleport:     { fill: withAlpha(moveStroke, 0.24), stroke: moveStroke, lw:2 },
             mine_place:   { fill: withAlpha(moveStroke, 0.20), stroke: moveStroke, lw:2 },
@@ -315,11 +334,12 @@ const Board = (() => {
     const { x, y } = hexCenter(col, row);
     ctx.save();
     ctx.translate(x, y - 4);
-    ctx.strokeStyle = '#e8d050';
+    // Black flag pole and flag
+    ctx.strokeStyle = '#222222';
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(0, 8); ctx.lineTo(0, -12); ctx.stroke();
-    ctx.fillStyle = '#f0e040';
+    ctx.fillStyle = '#111111';
     ctx.beginPath();
     ctx.moveTo(0, -12); ctx.lineTo(12, -7); ctx.lineTo(0, -2); ctx.closePath(); ctx.fill();
     ctx.restore();
@@ -349,18 +369,15 @@ const Board = (() => {
   function spawnPositions(side, count) {
     const col = side === 'player' ? 0 : COLS - 1;
     const positions = [];
-    const desiredRows = [];
-    if (count <= 1) desiredRows.push(Math.floor(ROWS / 2));
-    else {
-      for (let i = 0; i < count; i++) {
-        desiredRows.push(Math.round((i * (ROWS - 1)) / Math.max(1, count - 1)));
+    // Player: favor bottom rows; AI: favor top rows
+    const rowOrder = Array.from({length: ROWS}, (_, i) => i);
+    if (side === 'player') rowOrder.reverse(); // bottom-left
+    // AI stays top-right (ascending row order = top)
+    for (const r of rowOrder) {
+      if (isPassable(col, r) && !positions.find(p => p.row === r)) {
+        positions.push({ col, row: r });
+        if (positions.length >= count) break;
       }
-    }
-    for (const r of desiredRows) {
-      if (isPassable(col, r) && !positions.find(p => p.row === r)) positions.push({ col, row: r });
-    }
-    for (let r = 0; r < ROWS && positions.length < count; r++) {
-      if (isPassable(col, r) && !positions.find(p => p.row === r)) positions.push({ col, row: r });
     }
     return positions.slice(0, count);
   }

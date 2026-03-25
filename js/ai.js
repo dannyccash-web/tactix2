@@ -1,17 +1,13 @@
-
 // ============================================================
 // ai.js — AI turn logic for Melee and CTF modes
 // ============================================================
 
 const AI = (() => {
 
-  function takeTurn(state, api) {
-    const { liveUnits, unitAt, moveUnit, attackTarget, removePowerup, logMsg, checkWin } = api;
-
+  // Called once at start of AI turn to use med pack if needed
+  function useMedPack(state, api) {
+    const { liveUnits, removePowerup, logMsg } = api;
     const aiUnits = liveUnits('ai');
-    const playerUnits = liveUnits('player');
-    if (!aiUnits.length || !playerUnits.length) return;
-
     const medIdx = state.aiPowerups.indexOf('med_pack');
     if (medIdx !== -1) {
       const hurt = aiUnits.filter(u => u.hp > 0 && u.hp < u.maxHp / 2);
@@ -23,20 +19,11 @@ const AI = (() => {
         logMsg(`AI used Med Pack on ${target.name}`);
       }
     }
+  }
 
-    aiUnits.sort((a, b) => nearestEnemyDist(a, playerUnits) - nearestEnemyDist(b, playerUnits));
-
-    for (const unit of aiUnits) {
-      if (unit.hp <= 0 || unit.stunned) continue;
-      if (!liveUnits('player').length) break;
-
-      if (state.mode === 'ctf') doCtfMove(unit, state, api);
-      else doMeleeMove(unit, state, api);
-
-      checkWin();
-      if (state.phase === 'over') return;
-    }
-
+  // Called after all units have acted to optionally place a mine
+  function placeMine(state, api) {
+    const { liveUnits, unitAt, removePowerup, logMsg } = api;
     const mineIdx = state.aiPowerups.indexOf('mine');
     const stillPlayers = liveUnits('player');
     if (mineIdx !== -1 && stillPlayers.length > 0) {
@@ -55,22 +42,47 @@ const AI = (() => {
     }
   }
 
+  // Act with a single unit — called one at a time for sequential visual movement
+  function actUnit(unit, state, api) {
+    const { liveUnits, checkWin } = api;
+    if (!liveUnits('player').length) return;
+    if (state.mode === 'ctf') doCtfMove(unit, state, api);
+    else doMeleeMove(unit, state, api);
+    checkWin();
+  }
+
+  // Legacy full-turn (kept for compatibility, not used in sequential mode)
+  function takeTurn(state, api) {
+    useMedPack(state, api);
+    const aiUnits = liveUnits('ai');
+    aiUnits.sort((a, b) => nearestEnemyDist(a, api.liveUnits('player')) - nearestEnemyDist(b, api.liveUnits('player')));
+    for (const unit of aiUnits) {
+      if (unit.hp <= 0 || unit.stunned) continue;
+      actUnit(unit, state, api);
+      api.checkWin();
+      if (state.phase === 'over') return;
+    }
+    placeMine(state, api);
+  }
+
   function doMeleeMove(unit, state, api) {
     const { liveUnits, attackTarget, moveUnit } = api;
     const playerUnits = liveUnits('player');
     if (!playerUnits.length) return;
 
+    // Try to attack in place first
     const attackable = playerUnits.filter(p =>
       p.hp > 0 &&
       Board.hexDistance(unit.col, unit.row, p.col, p.row) <= unit.range &&
       Board.hasLOS(unit.col, unit.row, p.col, p.row)
     );
-    if (attackable.length) {
+    if (attackable.length && !unit.attackedThisTurn) {
       const t = pickBestVictim(unit, attackable);
       attackTarget(unit, t.col, t.row);
       return;
     }
 
+    // Move toward nearest/best target
     const target = pickMeleeTarget(unit, playerUnits);
     const maxSteps = Math.min(unit.speed - unit.speedUsedThisTurn, state.movePool);
     if (target && maxSteps > 0) {
@@ -78,6 +90,7 @@ const AI = (() => {
       if (dest) moveUnit(unit, dest.col, dest.row);
     }
 
+    // Try to attack after moving
     const postAttackable = liveUnits('player').filter(p =>
       p.hp > 0 &&
       Board.hexDistance(unit.col, unit.row, p.col, p.row) <= unit.range &&
@@ -94,12 +107,14 @@ const AI = (() => {
     const playerUnits = liveUnits('player');
     const playerCarrier = playerUnits.find(u => u.hasFlag);
 
+    // If this unit is carrying the flag, head to base
     if (unit.hasFlag) {
       doCarrierMove(unit, state, api);
       return;
     }
 
-    if (playerCarrier) {
+    // Prioritize attacking the player's flag carrier if in range
+    if (playerCarrier && !unit.attackedThisTurn) {
       const dist = Board.hexDistance(unit.col, unit.row, playerCarrier.col, playerCarrier.row);
       if (dist <= unit.range && Board.hasLOS(unit.col, unit.row, playerCarrier.col, playerCarrier.row)) {
         attackTarget(unit, playerCarrier.col, playerCarrier.row);
@@ -107,27 +122,35 @@ const AI = (() => {
       }
     }
 
+    // Determine movement target:
+    // 1. If player has flag → chase carrier
+    // 2. If flag is loose → go pick it up
+    // 3. Otherwise → attack nearest player
     const looseFlag = state.flag && !state.flag.carrier ? state.flag : null;
-    const target = looseFlag || playerCarrier || pickMeleeTarget(unit, playerUnits);
+    const moveTarget = playerCarrier || looseFlag || pickMeleeTarget(unit, playerUnits);
     const maxSteps = Math.min(unit.speed - unit.speedUsedThisTurn, state.movePool);
-    if (target && maxSteps > 0) {
-      const dest = bestApproach(unit, target, maxSteps, api);
+    if (moveTarget && maxSteps > 0) {
+      const dest = bestApproach(unit, moveTarget, maxSteps, api);
       if (dest) moveUnit(unit, dest.col, dest.row);
     }
 
+    // Try to attack after moving
     const attackable = liveUnits('player').filter(p =>
       p.hp > 0 &&
       Board.hexDistance(unit.col, unit.row, p.col, p.row) <= unit.range &&
       Board.hasLOS(unit.col, unit.row, p.col, p.row)
     );
     if (attackable.length && !unit.attackedThisTurn) {
-      const t = playerCarrier && attackable.includes(playerCarrier) ? playerCarrier : pickBestVictim(unit, attackable);
+      // Prioritize the flag carrier
+      const carrierNow = attackable.find(p => p.hasFlag);
+      const t = carrierNow || pickBestVictim(unit, attackable);
       attackTarget(unit, t.col, t.row);
     }
   }
 
   function doCarrierMove(unit, state, api) {
     const { moveUnit } = api;
+    // Flag bearer can only move 2 spaces
     const maxSteps = Math.min(2, unit.speed - unit.speedUsedThisTurn, state.movePool);
     if (maxSteps <= 0) return;
     let bestBase = null, bestDist = Infinity;
@@ -171,6 +194,7 @@ const AI = (() => {
   }
 
   function nearestEnemyDist(unit, enemies) {
+    if (!enemies.length) return 999;
     return Math.min(...enemies.map(e => Board.hexDistance(unit.col, unit.row, e.col, e.row)));
   }
 
@@ -207,5 +231,5 @@ const AI = (() => {
     return best;
   }
 
-  return { takeTurn };
+  return { takeTurn, useMedPack, placeMine, actUnit };
 })();

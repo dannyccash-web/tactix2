@@ -323,7 +323,8 @@ const Screens = (() => {
       ctx.fill();
       ctx.shadowColor = hot ? (team.glowColor || team.color) : 'transparent';
       ctx.shadowBlur = hot ? 26 : 0;
-      ctx.strokeStyle = team.color;
+      // Neutral outline like GameSelect; switches to team color on hover/select
+      ctx.strokeStyle = hot ? team.color : '#29455a';
       ctx.lineWidth = hot ? 3 : 2;
       ctx.stroke();
       ctx.shadowBlur = 0;
@@ -396,7 +397,7 @@ const Screens = (() => {
       });
       title.textContent = 'BUILD YOUR SQUAD';
 
-
+      const spacer = el('div', { flex:'1' });
       const backBtn = txBtn('BACK', () => E.setScreen(TeamSelect(mode)));
       const readyBtn = txBtn('READY', () => {
         E.setScreen(Battle(mode, teamId, [...roster], [...powerups]));
@@ -404,7 +405,7 @@ const Screens = (() => {
       readyBtn.classList.add('primary');
       if (!canReady) readyBtn.disabled = true;
 
-      nav.append(title, backBtn, readyBtn);
+      nav.append(title, spacer, backBtn, readyBtn);
       ui.appendChild(nav);
 
       // ── Two-column layout ─────────────────────────────────
@@ -461,20 +462,6 @@ const Screens = (() => {
           right.appendChild(rosterRow(pu.name, pu.cost, team.color, () => removePowerup(i), powerupIconKey(pu.id), true));
         });
       }
-
-      // READY button below squad panel
-      const readyRow = el('div', {
-        position:'absolute', bottom:'68px', right:'28px'
-      });
-      const readyBig = txBtn('READY', () => {
-        if (!canReady) return;
-        E.setScreen(Battle(mode, teamId, [...roster], [...powerups]));
-      });
-      readyBig.classList.add('primary');
-      readyBig.style.cssText += ';font-size:16px;padding:11px 42px;';
-      if (!canReady) readyBig.disabled = true;
-      readyRow.appendChild(readyBig);
-      ui.appendChild(readyRow);
 
       body.append(left, right);
       ui.appendChild(body);
@@ -1066,7 +1053,9 @@ const Screens = (() => {
 
 function drawCombatPopup(ctx, data) {
   const x = 348, y = 196, w = 584, h = 168;
-  const alpha = Math.max(0, Math.min(1, data.timer / 0.18, 1));
+  const fadeIn = Math.min(1, data.timer > 2.5 ? (2.8 - data.timer) / 0.3 : 1);
+  const fadeOut = Math.min(1, data.timer / 0.5);
+  const alpha = Math.min(fadeIn, fadeOut);
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.fillStyle = 'rgba(3,11,18,.94)';

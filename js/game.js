@@ -195,6 +195,7 @@ const Game = (() => {
     const u = state.selectedUnit;
     if (!u) return;
     state.highlights[Board.idx(u.col, u.row)] = { type: 'selected', color: u.team.color || '#ffff80' };
+    // Note: board render uses hl.color for 'selected' type
 
     if (state.phase === PHASE.MOVE && !u.stunned) {
       const maxSteps = Math.min(u.speed - u.speedUsedThisTurn, state.movePool);
@@ -363,7 +364,7 @@ const Game = (() => {
       attackerColor: attacker.team.color,
       defenderColor: defender.team.color,
       atkBase, defBase, atkMod: attacker.atk, defMod: defender.def,
-      atkTotal: atkRoll, defTotal: defRoll, hit, damage: attacker.dmg, timer: 1.6
+      atkTotal: atkRoll, defTotal: defRoll, hit, damage: attacker.dmg, timer: 2.8
     };
     logMsg(`${attacker.name} → ${defender.name}: ${hit ? 'HIT ' + attacker.dmg + ' dmg' : 'MISS'} (${atkRoll} vs ${defRoll})`);
 
@@ -655,17 +656,73 @@ const Game = (() => {
     checkWin();
     if (state.phase === PHASE.OVER) return;
 
-    // Delegate to AI module
+    // Use med pack first (instant, no visual)
     try {
-      AI.takeTurn(state, {
-        liveUnits, unitAt, moveUnit: aiMoveUnit, attackTarget,
-        removePowerup, applyDamage, triggerMine, logMsg,
-        checkWin, endGame, findPath: Board.findPath
-      });
-    } catch (err) {
-      console.error('AI turn failed', err);
-      logMsg('AI turn recovered from an error');
+      AI.useMedPack(state, { liveUnits, removePowerup, logMsg });
+    } catch(e) {}
+
+    // Get the ordered list of AI units to act
+    const aiUnits = liveUnits('ai').filter(u => !u.stunned);
+
+    // Process units one at a time with delay between each
+    let unitIndex = 0;
+
+    function processNextUnit() {
+      if (state.phase === PHASE.OVER) {
+        finishAITurn();
+        return;
+      }
+
+      // Clean up dead units
+      const remaining = aiUnits.filter(u => u.hp > 0 && !u.stunned && !u.attackedThisTurn && !u.movedThisTurn);
+      if (unitIndex >= aiUnits.length) {
+        // All units processed - place mine if any, then end turn
+        try {
+          AI.placeMine(state, { liveUnits, unitAt, removePowerup, logMsg });
+        } catch(e) {}
+        finishAITurn();
+        return;
+      }
+
+      const unit = aiUnits[unitIndex];
+      unitIndex++;
+
+      if (unit.hp <= 0 || unit.stunned) {
+        // Skip dead/stunned, move to next immediately
+        processNextUnit();
+        return;
+      }
+
+      // Act for this unit
+      try {
+        AI.actUnit(unit, state, {
+          liveUnits, unitAt, moveUnit: aiMoveUnit, attackTarget,
+          removePowerup, logMsg, checkWin, endGame, findPath: Board.findPath
+        });
+      } catch(err) {
+        console.error('AI unit action failed', err);
+      }
+
+      checkWin();
+      if (state.phase === PHASE.OVER) {
+        finishAITurn();
+        return;
+      }
+
+      // Wait for visual animation to complete before next unit acts
+      const delay = Math.max(600, (state.aiVisualDelay || 0) * 1000);
+      state.aiVisualDelay = 0;
+      setTimeout(processNextUnit, delay);
     }
+
+    function finishAITurn() {
+      if (state.phase !== PHASE.OVER) {
+        setTimeout(() => startNewPlayerTurn(), 600);
+      }
+    }
+
+    // Start processing with a small initial delay
+    setTimeout(processNextUnit, 400);
   }
 
   // AI version of move with visual step-through animation
@@ -752,10 +809,6 @@ const Game = (() => {
         pendingAI = false;
         state.aiVisualDelay = 0;
         runAITurn();
-        checkWin();
-        if (state.phase !== PHASE.OVER) {
-          setTimeout(() => startNewPlayerTurn(), Math.max(1250, (state.aiVisualDelay || 0) * 1000));
-        }
       }
     }
   }
@@ -765,7 +818,7 @@ const Game = (() => {
     if (!state) return;
 
     // Draw board
-    Board.render(ctx, state.highlights, state.mines);
+    Board.render(ctx, state.highlights, state.mines, state.playerTeam.color, state.aiTeam.color, state.mode);
 
     // CTF flag
     if (state.mode === 'ctf' && state.flag && !state.flag.carrier) {
@@ -814,10 +867,12 @@ const Game = (() => {
     // Status icons
     drawStatusIcons(ctx, x, y, unit);
 
-    // Flag indicator
+    // Flag indicator — black flag icon on bearer
     if (unit.hasFlag) {
       ctx.save();
-      ctx.fillStyle = '#f0e040';
+      ctx.fillStyle = '#111111';
+      ctx.strokeStyle = '#555555';
+      ctx.lineWidth = 0.5;
       ctx.font = 'bold 14px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
