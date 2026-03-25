@@ -5,7 +5,7 @@
 const Data = (() => {
 
   // ── Unit definitions ─────────────────────────────────────
-  // special: null | 'splash' | 'stun' | 'poison' | 'acid_tile' | 'fire_tile' | 'column_fire'
+  // special: null | 'splash' | 'stun' | 'poison' | 'acid_tile' | 'fire_dot' | 'adj_fire'
   const UNITS = {
     infantry: {
       id: 'infantry', name: 'INFANTRY', cost: 2,
@@ -42,8 +42,8 @@ const Data = (() => {
       speed: 3, range: 5, atk: 3, def: 0, dmg: 3, hp: 4,
       special: 'poison'
     },
-    acid_thrower: {
-      id: 'acid_thrower', name: 'ACID THROWER', cost: 7,
+    acid_reign: {
+      id: 'acid_reign', name: 'ACID REIGN', cost: 7,
       speed: 5, range: 3, atk: 4, def: 3, dmg: 4, hp: 6,
       special: 'acid_tile'
     },
@@ -52,15 +52,15 @@ const Data = (() => {
       speed: 6, range: 2, atk: 1, def: 1, dmg: 2, hp: 5,
       special: 'fire_dot'
     },
-    sharpshooter: {
-      id: 'sharpshooter', name: 'SHARPSHOOTER', cost: 5,
+    sparkshooter: {
+      id: 'sparkshooter', name: 'SPARKSHOOTER', cost: 5,
       speed: 3, range: 5, atk: 3, def: 0, dmg: 3, hp: 4,
       special: 'fire_dot'
     },
-    fire_caller: {
-      id: 'fire_caller', name: 'FIRE CALLER', cost: 7,
-      speed: 5, range: 10, atk: 4, def: 3, dmg: 4, hp: 6,
-      special: 'column_fire'
+    flame_thrower: {
+      id: 'flame_thrower', name: 'FLAME THROWER', cost: 7,
+      speed: 5, range: 5, atk: 4, def: 3, dmg: 4, hp: 6,
+      special: 'adj_fire'
     }
   };
 
@@ -125,7 +125,7 @@ const Data = (() => {
       tagline: 'Emphasis on Poison',
       color: '#3ad45a',
       glowColor: 'rgba(58,212,90,0.7)',
-      units: ['slasher', 'assassin', 'acid_thrower'],
+      units: ['slasher', 'assassin', 'acid_reign'],
       spriteKey: 'virent_soldier_sprite',
       soldierKey: 'virent-soldier',
       portrait: 'virent-soldier'
@@ -136,7 +136,7 @@ const Data = (() => {
       tagline: 'Emphasis on Fire',
       color: '#d47a1a',
       glowColor: 'rgba(212,122,26,0.7)',
-      units: ['grunt', 'sharpshooter', 'fire_caller'],
+      units: ['grunt', 'sparkshooter', 'flame_thrower'],
       spriteKey: 'magma_soldier_sprite',
       soldierKey: 'magma_soldier',
       portrait: 'magma_soldier'

@@ -1145,10 +1145,10 @@ function drawPopupPortrait(ctx, cx, cy, r, key, stroke) {
       shock_trooper:'shock_trooper_icon',
       slasher:'slasher_icon',
       assassin:'assassin_icon',
-      acid_thrower:'acid_thrower_icon',
+      acid_reign:'acid_thrower_icon',
       grunt:'infantry_icon',
-      sharpshooter:'sniper_icon',
-      fire_caller:'fire_caller_icon'
+      sparkshooter:'sniper_icon',
+      flame_thrower:'fire_caller_icon'
     };
     return m[id] || 'infantry_icon';
   }
@@ -1158,7 +1158,7 @@ function drawPopupPortrait(ctx, cx, cy, r, key, stroke) {
   }
   function specialLabel(s) {
     const m = {splash:'SPLASH DAMAGE',stun:'STUN ON HIT',poison:'POISON ON HIT',
-               acid_tile:'ACID TILE ON HIT',fire_dot:'FIRE DOT ON HIT',column_fire:'COLUMN FIRE'};
+               acid_tile:'ACID TILE ON HIT',fire_dot:'FIRE DOT ON HIT',adj_fire:'ADJ FIRE ON HIT'};
     return m[s] || s;
   }
 

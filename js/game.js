@@ -52,6 +52,7 @@ const Game = (() => {
       aiPowerups: aiRoster.powerups,
 
       mines: [],
+      fireTiles: [],  // { col, row, placedTurn } — cleared after 1 full round
       flag,
 
       selectedUnit: null,
@@ -398,16 +399,23 @@ const Game = (() => {
       case 'acid_tile':
         Board.setTile(defender.col, defender.row, Board.TILE.ACID);
         break;
-      case 'column_fire':
-        // All tiles in defender's column within range become fire
-        for (let r = 0; r < Board.ROWS; r++) {
-          if (Board.isPassable(defender.col, r) && Board.getTile(defender.col, r) !== Board.TILE.OBSTACLE) {
-            Board.setTile(defender.col, r, Board.TILE.FIRE);
-            const u = unitAt(defender.col, r);
-            if (u && u.hp > 0) applyDamage(u, 4, 'fire');
+      case 'adj_fire': {
+        // The defender takes full damage (already applied). All adjacent
+        // non-obstacle tiles become fire tiles for the current and following round.
+        Board.neighbors(defender.col, defender.row).forEach(nb => {
+          if (Board.getTile(nb.col, nb.row) !== Board.TILE.OBSTACLE) {
+            Board.setTile(nb.col, nb.row, Board.TILE.FIRE);
+            // Track for expiration after 1 full round
+            if (!state.fireTiles.some(ft => ft.col === nb.col && ft.row === nb.row)) {
+              state.fireTiles.push({ col: nb.col, row: nb.row, placedTurn: state.turn });
+            }
+            // Any unit already on that tile takes 2 damage immediately
+            const u = unitAt(nb.col, nb.row);
+            if (u && u.hp > 0) applyDamage(u, 2, 'fire');
           }
-        }
+        });
         break;
+      }
     }
   }
 
@@ -559,6 +567,9 @@ const Game = (() => {
     state.turn++;
     state.movePool = Data.MOVE_POOL;
 
+    // Expire fire tiles from the previous round
+    expireFireTiles();
+
     // Apply turn-start conditions to player units
     applyTurnStartConditions(state.playerUnits);
 
@@ -573,6 +584,22 @@ const Game = (() => {
 
     setPhase(PHASE.MOVE);
     if (state.onTurnEnd) state.onTurnEnd(state.turn);
+  }
+
+  function expireFireTiles() {
+    // Fire tiles placed more than 1 full round ago are cleared.
+    // A "full round" = both player and AI have taken a turn, so we clear
+    // tiles placed on any turn strictly before the current one.
+    state.fireTiles = state.fireTiles.filter(ft => {
+      if (ft.placedTurn < state.turn) {
+        // Only reset to EMPTY if it's still a fire tile (don't clobber acid)
+        if (Board.getTile(ft.col, ft.row) === Board.TILE.FIRE) {
+          Board.setTile(ft.col, ft.row, Board.TILE.EMPTY);
+        }
+        return false; // remove from tracking
+      }
+      return true; // keep — still within its active round
+    });
   }
 
   function applyTurnStartConditions(units) {
