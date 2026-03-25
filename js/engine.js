@@ -64,8 +64,6 @@ const TactixEngine = (() => {
 
   const AUDIO_MANIFEST = [
     { key: 'score',    src: 'assets/music/tactix_score.mp3',  loop: true,  volume: 0.4 },
-    { key: 'win',      src: 'assets/music/tactix_win.mp3',    loop: false, volume: 0.5 },
-    { key: 'loss',     src: 'assets/music/tactix_loss.mp3',   loop: false, volume: 0.5 },
     { key: 'gunshot',  src: 'assets/sounds/Gun_Shot.mp3',     loop: false, volume: 0.6 },
     { key: 'ricochet', src: 'assets/sounds/Gun_Ricochet.mp3', loop: false, volume: 0.5 }
   ];
@@ -97,9 +95,17 @@ const TactixEngine = (() => {
         audio.loop = loop;
         audio.volume = volume;
         audio.preload = 'auto';
-        audio.oncanplaythrough = () => { assets.audio[key] = audio; progress(key); resolve(); };
-        audio.onerror = () => { console.warn('Failed to load audio:', src); progress(key); resolve(); };
-        // Clone method for sound effects (play multiple instances)
+        let resolved = false;
+        function done() {
+          if (resolved) return;
+          resolved = true;
+          progress(key);
+          resolve();
+        }
+        audio.oncanplaythrough = () => { assets.audio[key] = audio; done(); };
+        audio.onerror = () => { console.warn('Failed to load audio:', src); done(); };
+        // Fallback: resolve after 3s even if canplaythrough never fires
+        setTimeout(done, 3000);
         audio._src = src;
         audio._volume = volume;
         audio._loop = loop;

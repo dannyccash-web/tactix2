@@ -830,35 +830,42 @@ const Game = (() => {
     const { x, y } = p;
 
     const spriteImg = TactixEngine.getImage(unit.team.spriteKey);
-    if (!spriteImg) return;
 
-    // Soldier sprite is 1024×1536 — a single full-body soldier
-    // Draw so feet are just below hex center, scaled to fit within 1.8× hex radius
-    const sw = Board.HEX_R * 2.18;    // display width
-    const sh = sw * (1536 / 1024);   // maintain aspect ratio → ~2.7 × HEX_R tall
+    // Sprite dimensions (used for HP bar position)
+    const sw = Board.HEX_R * 2.18;
+    const sh = sw * (1536 / 1024);
     const sx = x - sw / 2;
-    const sy = y - sh + Board.HEX_R * 0.80;  // feet sit near hex center
-
+    const sy = y - sh + Board.HEX_R * 0.80;
 
     ctx.save();
     ctx.globalAlpha = unit.stunned ? 0.5 : 1;
-    if (unit.stunned) ctx.filter = 'brightness(2.2) saturate(0)';
-    if (unit.side === 'ai') {
-      ctx.translate(x, 0);
-      ctx.scale(-1, 1);
-      ctx.drawImage(spriteImg, -sw / 2, sy, sw, sh);
+    if (spriteImg) {
+      if (unit.stunned) ctx.filter = 'brightness(2.2) saturate(0)';
+      if (unit.side === 'ai') {
+        ctx.translate(x, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(spriteImg, -sw / 2, sy, sw, sh);
+      } else {
+        ctx.drawImage(spriteImg, sx, sy, sw, sh);
+      }
+      ctx.filter = 'none';
     } else {
-      ctx.drawImage(spriteImg, sx, sy, sw, sh);
+      // Fallback: filled hex in team color
+      Board.drawHexPath(ctx, x, y, Board.HEX_R * 0.7);
+      ctx.fillStyle = unit.team.color || '#888';
+      ctx.fill();
+      ctx.strokeStyle = '#fff';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
     }
-    ctx.filter = 'none';
     ctx.restore();
 
-    // HP bar — draw just below sprite feet
     const feetY = sy + sh;
+
+    // HP bar — draw just below sprite feet
     drawHPBar(ctx, x, feetY, unit);
 
-    // Status icons above HP bar
-    const feetY = sy + sh;
+    // Status icons just below HP bar
     drawStatusIcons(ctx, x, feetY, unit);
 
     // Flag indicator — black flag icon on bearer

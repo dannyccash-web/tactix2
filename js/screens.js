@@ -887,8 +887,7 @@ const Screens = (() => {
         color:'#5a7888', marginBottom:'38px' });
       reasonEl.textContent = reason;
 
-      if (isWin)        E.playMusic('win');
-      else if (!isDraw) E.playMusic('loss');
+      if (isWin || !isDraw) E.playMusic('score');
 
       const again = txBtn('PLAY AGAIN', () => E.setScreen(Battle(mode, teamId, roster, powerups)));
       again.classList.add('primary');
