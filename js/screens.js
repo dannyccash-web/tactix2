@@ -261,10 +261,10 @@ const Screens = (() => {
     let selectedTeam = null;
 
     const layout = [
-      { id: 'vermillion', x: 180, y: 430 },
-      { id: 'azure',      x: 410, y: 300 },
-      { id: 'virent',     x: 640, y: 430 },
-      { id: 'phlox',      x: 870, y: 300 },
+      { id: 'virent',     x: 180,  y: 430 },
+      { id: 'azure',      x: 410,  y: 300 },
+      { id: 'phlox',      x: 640,  y: 430 },
+      { id: 'vermillion', x: 870,  y: 300 },
       { id: 'magma',      x: 1100, y: 430 }
     ];
     const teams = layout.map(item => Data.TEAMS[item.id]);

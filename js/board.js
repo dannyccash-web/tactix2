@@ -123,8 +123,9 @@ const Board = (() => {
   }
 
   function neighbors(col, row) {
-    const even = [[1,0],[1,-1],[0,-1],[-1,-1],[-1,0],[0,1]];
-    const odd  = [[1,1],[1,0],[0,-1],[-1,0],[-1,1],[0,1]];
+    // Offsets derived to match the toAxial / hexDistance coordinate system
+    const even = [[-1,0],[-1,1],[0,-1],[0,1],[1,0],[1,1]];
+    const odd  = [[-1,-1],[-1,0],[0,-1],[0,1],[1,-1],[1,0]];
     const offs = (col % 2 === 0) ? even : odd;
     return offs.map(([dc,dr]) => ({ col: col + dc, row: row + dr }))
       .filter(({ col:c, row:r }) => c >= 0 && c < COLS && r >= 0 && r < ROWS);

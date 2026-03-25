@@ -42,7 +42,35 @@ const AI = (() => {
     }
   }
 
-  // Act with a single unit — called one at a time for sequential visual movement
+  // Move phase for a single unit
+  function actUnitMove(unit, state, api) {
+    const { liveUnits } = api;
+    if (!liveUnits('player').length) return;
+    if (state.mode === 'ctf') doCtfMoveOnly(unit, state, api);
+    else doMeleeMoveOnly(unit, state, api);
+  }
+
+  // Attack phase for a single unit (called after movement animation completes)
+  function actUnitAttack(unit, state, api) {
+    const { liveUnits, attackTarget } = api;
+    if (!liveUnits('player').length) return;
+    if (unit.attackedThisTurn) return;
+
+    const playerUnits = liveUnits('player');
+    const attackable = playerUnits.filter(p =>
+      p.hp > 0 &&
+      Board.hexDistance(unit.col, unit.row, p.col, p.row) <= unit.range &&
+      Board.hasLOS(unit.col, unit.row, p.col, p.row)
+    );
+    if (!attackable.length) return;
+
+    // In CTF, prioritise the flag carrier
+    const carrier = attackable.find(p => p.hasFlag);
+    const target = carrier || pickBestVictim(unit, attackable);
+    attackTarget(unit, target.col, target.row);
+  }
+
+  // Act with a single unit (move + attack together) — kept for compatibility
   function actUnit(unit, state, api) {
     const { liveUnits, checkWin } = api;
     if (!liveUnits('player').length) return;
@@ -63,6 +91,54 @@ const AI = (() => {
       if (state.phase === 'over') return;
     }
     placeMine(state, api);
+  }
+
+  // Move only — no attack (attack is triggered separately after animation)
+  function doMeleeMoveOnly(unit, state, api) {
+    const { liveUnits, moveUnit } = api;
+    const playerUnits = liveUnits('player');
+    if (!playerUnits.length) return;
+
+    // Check if already in attack range — if so, don't move (save steps)
+    const alreadyInRange = playerUnits.some(p =>
+      p.hp > 0 &&
+      Board.hexDistance(unit.col, unit.row, p.col, p.row) <= unit.range &&
+      Board.hasLOS(unit.col, unit.row, p.col, p.row)
+    );
+    if (alreadyInRange) return;
+
+    const target = pickMeleeTarget(unit, playerUnits);
+    const maxSteps = Math.min(unit.speed - unit.speedUsedThisTurn, state.movePool);
+    if (target && maxSteps > 0) {
+      const dest = bestApproach(unit, target, maxSteps, api);
+      if (dest) moveUnit(unit, dest.col, dest.row);
+    }
+  }
+
+  function doCtfMoveOnly(unit, state, api) {
+    const { liveUnits, moveUnit } = api;
+    const playerUnits = liveUnits('player');
+
+    if (unit.hasFlag) {
+      doCarrierMove(unit, state, api);
+      return;
+    }
+
+    const playerCarrier = playerUnits.find(u => u.hasFlag);
+
+    // If carrier is already in attack range, don't move — attack will fire separately
+    if (playerCarrier) {
+      const dist = Board.hexDistance(unit.col, unit.row, playerCarrier.col, playerCarrier.row);
+      if (dist <= unit.range && Board.hasLOS(unit.col, unit.row, playerCarrier.col, playerCarrier.row)) return;
+    }
+
+    const looseFlag = state.flag && !state.flag.carrier ? state.flag : null;
+    const moveTarget = playerCarrier || looseFlag || pickMeleeTarget(unit, playerUnits);
+    const maxSteps = Math.min(unit.speed - unit.speedUsedThisTurn, state.movePool);
+    if (moveTarget && maxSteps > 0) {
+      const dest = bestApproach(unit, moveTarget, maxSteps, api);
+      if (dest) moveUnit(unit, dest.col, dest.row);
+    }
   }
 
   function doMeleeMove(unit, state, api) {
@@ -204,7 +280,7 @@ const AI = (() => {
     const dist = new Map([[startIdx, 0]]);
     const queue = [{ col: unit.col, row: unit.row }];
     let best = null;
-    let bestKey = null;
+    let bestScore = null;
 
     while (queue.length) {
       const cur = queue.shift();
@@ -212,11 +288,20 @@ const AI = (() => {
       const d = dist.get(curIdx);
       if (d > maxSteps) continue;
 
-      const distToTarget = Board.hexDistance(cur.col, cur.row, target.col, target.row);
-      const key = [Math.max(0, distToTarget - unit.range), distToTarget, -d].join('|');
-      if ((cur.col !== unit.col || cur.row !== unit.row) && (bestKey === null || key < bestKey)) {
-        bestKey = key;
-        best = cur;
+      if (cur.col !== unit.col || cur.row !== unit.row) {
+        const distToTarget = Board.hexDistance(cur.col, cur.row, target.col, target.row);
+        // Primary: minimize steps-outside-range (0 if already in range)
+        // Secondary: minimize total distance to target
+        // Tertiary: maximize steps taken (get as close as possible)
+        const outsideRange = Math.max(0, distToTarget - unit.range);
+        const score = [outsideRange, distToTarget, -d];
+        if (bestScore === null ||
+            score[0] < bestScore[0] ||
+            (score[0] === bestScore[0] && score[1] < bestScore[1]) ||
+            (score[0] === bestScore[0] && score[1] === bestScore[1] && score[2] < bestScore[2])) {
+          bestScore = score;
+          best = cur;
+        }
       }
 
       for (const nb of Board.neighbors(cur.col, cur.row)) {
@@ -231,5 +316,5 @@ const AI = (() => {
     return best;
   }
 
-  return { takeTurn, useMedPack, placeMine, actUnit };
+  return { takeTurn, useMedPack, placeMine, actUnit, actUnitMove, actUnitAttack };
 })();

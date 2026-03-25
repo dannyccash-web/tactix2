@@ -457,10 +457,10 @@ const Game = (() => {
 
     if (puId === 'med_pack') {
       state.puState = PUSTATE.MED;
-      // Highlight all friendly damaged units
+      // Highlight all friendly damaged units in team color
       liveUnits('player').forEach(u => {
         if (u.hp < u.maxHp) {
-          state.highlights[Board.idx(u.col, u.row)] = 'selected';
+          state.highlights[Board.idx(u.col, u.row)] = { type: 'selected', color: state.playerTeam.color };
         }
       });
     } else if (puId === 'mine') {
@@ -475,9 +475,9 @@ const Game = (() => {
       }
     } else if (puId === 'teleporter') {
       state.puState = PUSTATE.TELE_UNIT;
-      // Highlight all friendly units
+      // Highlight all friendly units in team color
       liveUnits('player').forEach(u => {
-        state.highlights[Board.idx(u.col, u.row)] = 'selected';
+        state.highlights[Board.idx(u.col, u.row)] = { type: 'selected', color: state.playerTeam.color };
       });
     }
   }
@@ -661,68 +661,60 @@ const Game = (() => {
       AI.useMedPack(state, { liveUnits, removePowerup, logMsg });
     } catch(e) {}
 
-    // Get the ordered list of AI units to act
+    // Sort units: closest to enemy first so frontline acts first
     const aiUnits = liveUnits('ai').filter(u => !u.stunned);
+    const playerUnits = liveUnits('player');
+    aiUnits.sort((a, b) => {
+      const distA = playerUnits.length ? Math.min(...playerUnits.map(p => Board.hexDistance(a.col, a.row, p.col, p.row))) : 0;
+      const distB = playerUnits.length ? Math.min(...playerUnits.map(p => Board.hexDistance(b.col, b.row, p.col, p.row))) : 0;
+      return distA - distB;
+    });
 
-    // Process units one at a time with delay between each
     let unitIndex = 0;
+    const api = { liveUnits, unitAt, moveUnit: aiMoveUnit, attackTarget, removePowerup, logMsg, checkWin, endGame, findPath: Board.findPath };
 
     function processNextUnit() {
-      if (state.phase === PHASE.OVER) {
-        finishAITurn();
-        return;
-      }
+      if (state.phase === PHASE.OVER) { finishAITurn(); return; }
 
-      // Clean up dead units
-      const remaining = aiUnits.filter(u => u.hp > 0 && !u.stunned && !u.attackedThisTurn && !u.movedThisTurn);
       if (unitIndex >= aiUnits.length) {
-        // All units processed - place mine if any, then end turn
-        try {
-          AI.placeMine(state, { liveUnits, unitAt, removePowerup, logMsg });
-        } catch(e) {}
+        try { AI.placeMine(state, { liveUnits, unitAt, removePowerup, logMsg }); } catch(e) {}
         finishAITurn();
         return;
       }
 
-      const unit = aiUnits[unitIndex];
-      unitIndex++;
+      const unit = aiUnits[unitIndex++];
+      if (unit.hp <= 0 || unit.stunned) { processNextUnit(); return; }
 
-      if (unit.hp <= 0 || unit.stunned) {
-        // Skip dead/stunned, move to next immediately
-        processNextUnit();
-        return;
-      }
-
-      // Act for this unit
-      try {
-        AI.actUnit(unit, state, {
-          liveUnits, unitAt, moveUnit: aiMoveUnit, attackTarget,
-          removePowerup, logMsg, checkWin, endGame, findPath: Board.findPath
-        });
-      } catch(err) {
-        console.error('AI unit action failed', err);
-      }
-
-      checkWin();
-      if (state.phase === PHASE.OVER) {
-        finishAITurn();
-        return;
-      }
-
-      // Wait for visual animation to complete before next unit acts
-      const delay = Math.max(600, (state.aiVisualDelay || 0) * 1000);
+      // Phase 1: move the unit (aiMoveUnit sets aiVisualDelay)
       state.aiVisualDelay = 0;
-      setTimeout(processNextUnit, delay);
+      try { AI.actUnitMove(unit, state, api); } catch(err) { console.error('AI move error', err); }
+
+      // Wait for movement animation, then do the attack
+      const moveDelay = Math.max(700, (state.aiVisualDelay || 0) * 1000 + 200);
+      state.aiVisualDelay = 0;
+
+      setTimeout(() => {
+        if (state.phase === PHASE.OVER) { finishAITurn(); return; }
+
+        // Phase 2: attack (separate visible step)
+        try { AI.actUnitAttack(unit, state, api); } catch(err) { console.error('AI attack error', err); }
+
+        checkWin();
+        if (state.phase === PHASE.OVER) { finishAITurn(); return; }
+
+        // Pause after attack before next unit moves
+        setTimeout(processNextUnit, 600);
+      }, moveDelay);
     }
 
     function finishAITurn() {
       if (state.phase !== PHASE.OVER) {
-        setTimeout(() => startNewPlayerTurn(), 600);
+        setTimeout(() => startNewPlayerTurn(), 500);
       }
     }
 
-    // Start processing with a small initial delay
-    setTimeout(processNextUnit, 400);
+    // Small initial delay before AI starts acting
+    setTimeout(processNextUnit, 500);
   }
 
   // AI version of move with visual step-through animation
@@ -861,11 +853,13 @@ const Game = (() => {
     ctx.filter = 'none';
     ctx.restore();
 
-    // HP bar
-    drawHPBar(ctx, x, y, unit);
+    // HP bar — draw just below sprite feet
+    const feetY = sy + sh;
+    drawHPBar(ctx, x, feetY, unit);
 
-    // Status icons
-    drawStatusIcons(ctx, x, y, unit);
+    // Status icons above HP bar
+    const feetY = sy + sh;
+    drawStatusIcons(ctx, x, feetY, unit);
 
     // Flag indicator — black flag icon on bearer
     if (unit.hasFlag) {
@@ -882,11 +876,11 @@ const Game = (() => {
 
   }
 
-  function drawHPBar(ctx, cx, cy, unit) {
+  function drawHPBar(ctx, cx, feetY, unit) {
     const w = Board.HEX_R * 1.4;
     const h = 4;
     const x = cx - w / 2;
-    const y = cy - Board.HEX_R * 0.42;
+    const y = feetY + 2;   // 2px gap below feet
 
     ctx.fillStyle = 'rgba(0,0,0,0.7)';
     ctx.fillRect(x, y, w, h);
@@ -897,13 +891,13 @@ const Game = (() => {
     ctx.fillRect(x, y, w * pct, h);
   }
 
-  function drawStatusIcons(ctx, cx, cy, unit) {
+  function drawStatusIcons(ctx, cx, feetY, unit) {
     const icons = [];
     if (unit.poisoned) icons.push({ color: '#60ee60', label: 'P' });
     if (unit.onFire)   icons.push({ color: '#ff8030', label: 'F' });
     icons.forEach((ic, i) => {
       const x = cx - Board.HEX_R * 0.5 + i * 12;
-      const y = cy - Board.HEX_R * 1.0;
+      const y = feetY + 10;   // just below HP bar
       ctx.fillStyle = ic.color;
       ctx.font = 'bold 9px sans-serif';
       ctx.textAlign = 'center';
