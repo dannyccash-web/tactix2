@@ -119,6 +119,8 @@ const TactixEngine = (() => {
   // ── Audio ────────────────────────────────────────────────
   let currentMusic = null;
   let musicUnlocked = false;
+  let musicVolume = 0.4;
+  let sfxVolume = 0.6;
 
   function playMusic(key) {
     if (currentMusic) {
@@ -127,6 +129,7 @@ const TactixEngine = (() => {
     }
     const track = assets.audio[key];
     if (!track) return;
+    track.volume = musicVolume;
     currentMusic = track;
     if (musicUnlocked) {
       track.currentTime = 0;
@@ -143,11 +146,22 @@ const TactixEngine = (() => {
   function playSFX(key) {
     const src = assets.audio[key];
     if (!src || !musicUnlocked) return;
-    // Create a fresh audio element so overlapping shots work
     const sfx = new Audio(src._src || src.src);
-    sfx.volume = src._volume || 0.5;
+    sfx.volume = sfxVolume;
     sfx.play().catch(() => {});
   }
+
+  function setMusicVolume(v) {
+    musicVolume = Math.max(0, Math.min(1, v));
+    if (currentMusic) currentMusic.volume = musicVolume;
+  }
+
+  function setSFXVolume(v) {
+    sfxVolume = Math.max(0, Math.min(1, v));
+  }
+
+  function getMusicVolume() { return musicVolume; }
+  function getSFXVolume()   { return sfxVolume; }
 
   // ── Screen management ────────────────────────────────────
   function setScreen(screen) {
@@ -270,6 +284,10 @@ const TactixEngine = (() => {
     playMusic,
     playSFX,
     unlockAudio,
+    setMusicVolume,
+    setSFXVolume,
+    getMusicVolume,
+    getSFXVolume,
     drawBackground,
     drawDim,
     drawText,

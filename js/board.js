@@ -116,6 +116,9 @@ const Board = (() => {
   function axialToOffset(q, r) {
     return { col: q, row: r + Math.floor((q + (q & 1)) / 2) };
   }
+
+  // hexDistance counts the minimum number of tile steps between two hexes,
+  // consistent with the neighbors() function (verified exhaustively).
   function hexDistance(c1, r1, c2, r2) {
     const a = toAxial(c1, r1), b = toAxial(c2, r2);
     const dq = a.q - b.q, dr = a.r - b.r;
@@ -184,7 +187,7 @@ const Board = (() => {
 
   function hasLOS(c1, r1, c2, r2) {
     const dist = hexDistance(c1, r1, c2, r2);
-    if (dist === 0) return true;
+    if (dist <= 1) return true;  // adjacent tiles always have LOS
     const a1 = toAxial(c1, r1), a2 = toAxial(c2, r2);
     for (let i = 1; i < dist; i++) {
       const t = i / dist;

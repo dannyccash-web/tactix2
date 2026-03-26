@@ -212,7 +212,7 @@ const Game = (() => {
       });
     }
 
-    if (state.phase === PHASE.ATTACK && !u.attackedThisTurn && !u.stunned) {
+    if (state.phase === PHASE.ATTACK && !u.attackedThisTurn && !u.stunned && !(state.mode === 'ctf' && u.hasFlag)) {
       allUnits().forEach(target => {
         if (target.side === u.side) return;
         if (target.hp <= 0) return;
@@ -639,9 +639,8 @@ const Game = (() => {
     if (state.onGameOver) state.onGameOver(winner, reason);
   }
 
-  // ── AI turn ───────────────────────────────────────────────
+  // ── AI turn: power-ups → all moves → all attacks ─────────
   function runAITurn() {
-    // Reset AI unit flags
     state.movePool = Data.MOVE_POOL;
     liveUnits('ai').forEach(u => {
       u.movedThisTurn = false;
@@ -651,70 +650,57 @@ const Game = (() => {
       else { u.stunned = false; }
     });
 
-    // Apply turn-start conditions to AI units
     applyTurnStartConditions(state.aiUnits);
     checkWin();
     if (state.phase === PHASE.OVER) return;
 
-    // Use med pack first (instant, no visual)
-    try {
-      AI.useMedPack(state, { liveUnits, removePowerup, logMsg });
-    } catch(e) {}
-
-    // Sort units: closest to enemy first so frontline acts first
-    const aiUnits = liveUnits('ai').filter(u => !u.stunned);
-    const playerUnits = liveUnits('player');
-    aiUnits.sort((a, b) => {
-      const distA = playerUnits.length ? Math.min(...playerUnits.map(p => Board.hexDistance(a.col, a.row, p.col, p.row))) : 0;
-      const distB = playerUnits.length ? Math.min(...playerUnits.map(p => Board.hexDistance(b.col, b.row, p.col, p.row))) : 0;
-      return distA - distB;
-    });
-
-    let unitIndex = 0;
     const api = { liveUnits, unitAt, moveUnit: aiMoveUnit, attackTarget, removePowerup, logMsg, checkWin, endGame, findPath: Board.findPath };
 
-    function processNextUnit() {
-      if (state.phase === PHASE.OVER) { finishAITurn(); return; }
-
-      if (unitIndex >= aiUnits.length) {
-        try { AI.placeMine(state, { liveUnits, unitAt, removePowerup, logMsg }); } catch(e) {}
-        finishAITurn();
-        return;
-      }
-
-      const unit = aiUnits[unitIndex++];
-      if (unit.hp <= 0 || unit.stunned) { processNextUnit(); return; }
-
-      // Phase 1: move the unit (aiMoveUnit sets aiVisualDelay)
-      state.aiVisualDelay = 0;
-      try { AI.actUnitMove(unit, state, api); } catch(err) { console.error('AI move error', err); }
-
-      // Wait for movement animation, then do the attack
-      const moveDelay = Math.max(700, (state.aiVisualDelay || 0) * 1000 + 200);
-      state.aiVisualDelay = 0;
-
-      setTimeout(() => {
-        if (state.phase === PHASE.OVER) { finishAITurn(); return; }
-
-        // Phase 2: attack (separate visible step)
-        try { AI.actUnitAttack(unit, state, api); } catch(err) { console.error('AI attack error', err); }
-
-        checkWin();
-        if (state.phase === PHASE.OVER) { finishAITurn(); return; }
-
-        // Pause after attack before next unit moves
-        setTimeout(processNextUnit, 600);
-      }, moveDelay);
-    }
+    // Sort: closest-to-enemy first
+    const playerUnits = liveUnits('player');
+    const aiUnits = liveUnits('ai').filter(u => !u.stunned);
+    aiUnits.sort((a, b) => {
+      const dA = playerUnits.length ? Math.min(...playerUnits.map(p => Board.hexDistance(a.col, a.row, p.col, p.row))) : 0;
+      const dB = playerUnits.length ? Math.min(...playerUnits.map(p => Board.hexDistance(b.col, b.row, p.col, p.row))) : 0;
+      return dA - dB;
+    });
 
     function finishAITurn() {
-      if (state.phase !== PHASE.OVER) {
-        setTimeout(() => startNewPlayerTurn(), 500);
-      }
+      if (state.phase !== PHASE.OVER) setTimeout(() => startNewPlayerTurn(), 500);
     }
 
-    // Small initial delay before AI starts acting
-    setTimeout(processNextUnit, 500);
+    // Phase 3: attack one unit at a time
+    function runAttacks(idx) {
+      if (state.phase === PHASE.OVER) { finishAITurn(); return; }
+      if (idx >= aiUnits.length) { finishAITurn(); return; }
+      const unit = aiUnits[idx];
+      if (unit.hp <= 0 || unit.stunned) { runAttacks(idx + 1); return; }
+      try { AI.actUnitAttack(unit, state, api); } catch(e) { console.error('AI attack', e); }
+      checkWin();
+      if (state.phase === PHASE.OVER) { finishAITurn(); return; }
+      setTimeout(() => runAttacks(idx + 1), 600);
+    }
+
+    // Phase 2: move one unit at a time, then trigger attacks
+    function runMoves(idx) {
+      if (state.phase === PHASE.OVER) { finishAITurn(); return; }
+      if (idx >= aiUnits.length) {
+        try { AI.placeMine(state, { liveUnits, unitAt, removePowerup, logMsg }); } catch(e) {}
+        setTimeout(() => runAttacks(0), 400);
+        return;
+      }
+      const unit = aiUnits[idx];
+      if (unit.hp <= 0 || unit.stunned) { runMoves(idx + 1); return; }
+      state.aiVisualDelay = 0;
+      try { AI.actUnitMove(unit, state, api); } catch(e) { console.error('AI move', e); }
+      const delay = Math.max(650, (state.aiVisualDelay || 0) * 1000 + 150);
+      state.aiVisualDelay = 0;
+      setTimeout(() => runMoves(idx + 1), delay);
+    }
+
+    // Phase 1: use med pack instantly, then start moving after brief pause
+    try { AI.useMedPack(state, { liveUnits, removePowerup, logMsg }); } catch(e) {}
+    setTimeout(() => runMoves(0), 500);
   }
 
   // AI version of move with visual step-through animation
@@ -817,8 +803,14 @@ const Game = (() => {
       Board.drawFlag(ctx, state.flag.col, state.flag.row);
     }
 
-    // Draw units
-    allUnits().forEach(u => drawUnit(ctx, u));
+    // Draw units — sort by visual Y so bottom-of-screen units render in front
+    const unitsToDraw = allUnits().filter(u => u.hp > 0);
+    unitsToDraw.sort((a, b) => {
+      const ay = (a.visualY != null) ? a.visualY : Board.hexCenter(a.col, a.row).y;
+      const by = (b.visualY != null) ? b.visualY : Board.hexCenter(b.col, b.row).y;
+      return ay - by;
+    });
+    unitsToDraw.forEach(u => drawUnit(ctx, u));
 
     // Draw animations
     drawAnims(ctx);
@@ -862,11 +854,11 @@ const Game = (() => {
 
     const feetY = sy + sh;
 
-    // HP bar — draw just below sprite feet
-    drawHPBar(ctx, x, feetY, unit);
+    // HP bar — 2px gap above feet (visually just below the sprite bottom edge)
+    drawHPBar(ctx, x, feetY - 8, unit);
 
     // Status icons just below HP bar
-    drawStatusIcons(ctx, x, feetY, unit);
+    drawStatusIcons(ctx, x, feetY + 2, unit);
 
     // Flag indicator — black flag icon on bearer
     if (unit.hasFlag) {
@@ -883,33 +875,30 @@ const Game = (() => {
 
   }
 
-  function drawHPBar(ctx, cx, feetY, unit) {
+  function drawHPBar(ctx, cx, barY, unit) {
     const w = Board.HEX_R * 1.4;
     const h = 4;
     const x = cx - w / 2;
-    const y = feetY + 2;   // 2px gap below feet
-
+    const y = barY;
     ctx.fillStyle = 'rgba(0,0,0,0.7)';
     ctx.fillRect(x, y, w, h);
-
     const pct = Math.max(0, unit.hp / unit.maxHp);
     const barColor = pct > 0.5 ? '#4ccc4c' : pct > 0.25 ? '#cccc40' : '#cc3030';
     ctx.fillStyle = barColor;
     ctx.fillRect(x, y, w * pct, h);
   }
 
-  function drawStatusIcons(ctx, cx, feetY, unit) {
+  function drawStatusIcons(ctx, cx, iconsY, unit) {
     const icons = [];
     if (unit.poisoned) icons.push({ color: '#60ee60', label: 'P' });
     if (unit.onFire)   icons.push({ color: '#ff8030', label: 'F' });
     icons.forEach((ic, i) => {
       const x = cx - Board.HEX_R * 0.5 + i * 12;
-      const y = feetY + 10;   // just below HP bar
       ctx.fillStyle = ic.color;
       ctx.font = 'bold 9px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(ic.label, x, y);
+      ctx.fillText(ic.label, x, iconsY);
     });
   }
 

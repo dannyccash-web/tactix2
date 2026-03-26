@@ -824,41 +824,84 @@ const Screens = (() => {
           });
         });
       } else if (menuTab === 'settings') {
-        const p = el('div', { fontFamily:'RobotoMono,monospace', fontSize:'11px', color:'#4a6878', lineHeight:'1.8' });
-        p.textContent = 'Volume controls coming in a future update.\n\nClick outside the panel to close.';
-        content.appendChild(p);
+        // Volume sliders
+        function makeSlider(label, initialVal, onChange) {
+          const row = el('div', { display:'flex', alignItems:'center', gap:'12px', marginBottom:'18px' });
+          const lbl = el('div', { fontFamily:'Iceberg,monospace', fontSize:'12px', letterSpacing:'2px', color:'#c8dce8', width:'130px' });
+          lbl.textContent = label;
+          const slider = document.createElement('input');
+          slider.type = 'range'; slider.min = '0'; slider.max = '100';
+          slider.value = String(Math.round(initialVal * 100));
+          Object.assign(slider.style, { flex:'1', accentColor:'#4a90b0', cursor:'pointer' });
+          const valEl = el('div', { fontFamily:'RobotoMono,monospace', fontSize:'11px', color:'#7a9aaa', width:'36px', textAlign:'right' });
+          valEl.textContent = slider.value + '%';
+          slider.addEventListener('input', () => {
+            valEl.textContent = slider.value + '%';
+            onChange(slider.value / 100);
+          });
+          row.append(lbl, slider, valEl);
+          return row;
+        }
+
+        const musicVol = E.getMusicVolume ? E.getMusicVolume() : 0.4;
+        const sfxVol   = E.getSFXVolume   ? E.getSFXVolume()   : 0.6;
+
+        content.appendChild(makeSlider('MUSIC', musicVol, v => E.setMusicVolume && E.setMusicVolume(v)));
+        content.appendChild(makeSlider('SOUND EFFECTS', sfxVol, v => E.setSFXVolume && E.setSFXVolume(v)));
+
+        const hint = el('div', { fontFamily:'RobotoMono,monospace', fontSize:'10px', color:'#3a5060', marginTop:'4px' });
+        hint.textContent = 'Click outside the panel to close.';
+        content.appendChild(hint);
+
         const quitBtn = txBtn('QUIT TO TITLE', () => { E.setScreen(Title()); E.playMusic('score'); });
         quitBtn.style.marginTop = '20px';
         content.appendChild(quitBtn);
       } else {
-        const pre = el('pre', { fontFamily:'RobotoMono,monospace', fontSize:'10px',
-          color:'#6a8898', lineHeight:'1.7', whiteSpace:'pre-wrap' });
-        pre.textContent = [
-          'TURN STRUCTURE',
-          '  MOVE phase → ATTACK phase → END TURN',
-          '  10 shared movement points per side per turn.',
-          '',
-          'MOVEMENT',
-          '  Select a unit then click a blue-highlighted tile.',
-          '  Units cannot pass through other units or obstacles.',
-          '',
-          'COMBAT',
-          '  Select a unit in ATTACK phase.',
-          '  Click a red-highlighted enemy.',
-          '  Roll d10 + ATK vs d10 + DEF. Hit if attack > defense.',
-          '',
-          'POWER-UPS',
-          '  Click a power-up icon, then follow on-board prompts.',
-          '  Med Pack: +3 HP.  Mine: place explosive.',
-          '  Teleporter: warp a friendly unit anywhere.',
-          '',
-          'MELEE WIN',
-          '  Eliminate all enemy units.',
-          '',
-          'CTF WIN',
-          '  Carry the flag to your own base (top-left corner).',
-        ].join('\n');
-        content.appendChild(pre);
+        // Rules — section headers in active tab colour, body text in dim colour
+        const HEADER_COLOR = '#c8dce8';
+        const BODY_COLOR   = '#6a8898';
+        const sections = [
+          { title: 'TURN STRUCTURE', lines: [
+            'MOVE phase → ATTACK phase → END TURN',
+            '10 shared movement points per side per turn.',
+          ]},
+          { title: 'MOVEMENT', lines: [
+            'Select a unit then click a highlighted tile.',
+            'Units cannot pass through other units or obstacles.',
+            'Flag bearers can only move 2 spaces and cannot attack.',
+          ]},
+          { title: 'COMBAT', lines: [
+            'Select a unit in ATTACK phase, then click a red-highlighted enemy.',
+            'Roll d10 + ATK vs d10 + DEF. Hit if attack total exceeds defense.',
+          ]},
+          { title: 'POWER-UPS', lines: [
+            'Click a power-up icon, then follow on-board prompts.',
+            'Med Pack: restores 3 HP.  Mine: place explosive (2 dmg + splash).',
+            'Teleporter: warp a friendly unit anywhere on the board.',
+          ]},
+          { title: 'MINES', lines: [
+            'Any unit moving through a mine tile triggers it immediately.',
+            'Direct hit: 2 damage. Adjacent units: 1 splash damage.',
+          ]},
+          { title: 'MELEE WIN', lines: ['Eliminate all enemy units.'] },
+          { title: 'CAPTURE THE FLAG', lines: [
+            'Pick up the flag by moving onto its tile.',
+            'Carry it to your base corner to win.',
+            'If the flag bearer is killed, the flag drops and can be recovered.',
+          ]},
+        ];
+        sections.forEach(sec => {
+          const hdr = el('div', { fontFamily:'Iceberg,monospace', fontSize:'11px', letterSpacing:'2px',
+            color: HEADER_COLOR, marginTop:'14px', marginBottom:'4px' });
+          hdr.textContent = sec.title;
+          content.appendChild(hdr);
+          sec.lines.forEach(line => {
+            const p = el('div', { fontFamily:'RobotoMono,monospace', fontSize:'10px',
+              color: BODY_COLOR, lineHeight:'1.6', paddingLeft:'8px' });
+            p.textContent = line;
+            content.appendChild(p);
+          });
+        });
       }
 
       const inner = el('div', { display:'flex', flex:'1' });
