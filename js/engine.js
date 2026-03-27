@@ -72,7 +72,7 @@ const TactixEngine = (() => {
     { key: 'assassin_icon',           src: 'assets/icons/assassin_icon.png' },
     { key: 'acid_thrower_icon',       src: 'assets/icons/acid_thrower_icon.png' },
     { key: 'med_pack_icon',           src: 'assets/icons/med_pack_icon.png' },
-    { key: 'mine_icon',               src: 'assets/icons/mine_icon.png' },
+    { key: 'mine_icon',               src: 'assets/icons/mine_icon.svg' },
     { key: 'teleporter_icon',         src: 'assets/icons/teleporter_icon.png' },
     { key: 'fire_caller_icon',        src: 'assets/icons/fire_caller_icon.png' },
     // Backgrounds

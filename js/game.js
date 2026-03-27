@@ -24,9 +24,10 @@ const Game = (() => {
     Board.generate();
 
     const playerTeam = Data.TEAMS[setup.playerTeam];
-    const aiTeamId   = pickAITeam(setup.playerTeam);
+    const playerWins = getPlayerWins();
+    const aiTeamId   = pickAITeam(setup.playerTeam, playerWins);
     const aiTeam     = Data.TEAMS[aiTeamId];
-    const aiRoster   = buildAIRoster(aiTeam);
+    const aiRoster   = buildAIRoster(aiTeam, playerWins);
 
     const playerUnits = spawnUnits(setup.playerRoster, 'player', playerTeam);
     const aiUnits     = spawnUnits(aiRoster.units, 'ai', aiTeam);
@@ -77,12 +78,35 @@ const Game = (() => {
     aiTimer = 0;
   }
 
-  function pickAITeam(exclude) {
-    const ids = Object.keys(Data.TEAMS).filter(id => id !== exclude);
-    return ids[Math.floor(Math.random() * ids.length)];
+  function getPlayerWins() {
+    try {
+      const raw = localStorage.getItem('tactix2_player_stats');
+      if (!raw) return 0;
+      const parsed = JSON.parse(raw);
+      return Number(parsed.wins) || 0;
+    } catch {
+      return 0;
+    }
   }
 
-  function buildAIRoster(team) {
+  function isTeamUnlockedForWins(teamId, wins) {
+    const reqs = { azure: 0, vermillion: 0, phlox: 5, magma: 10, virent: 15 };
+    return wins >= (reqs[teamId] ?? 0);
+  }
+
+  function isPowerupUnlockedForWins(powerupId, wins) {
+    const reqs = { med_pack: 0, mine: 1, teleporter: 7 };
+    return wins >= (reqs[powerupId] ?? 0);
+  }
+
+  function pickAITeam(exclude, wins = 0) {
+    const ids = Object.keys(Data.TEAMS).filter(id => id !== exclude && isTeamUnlockedForWins(id, wins));
+    const fallback = Object.keys(Data.TEAMS).filter(id => id !== exclude);
+    const pool = ids.length ? ids : fallback;
+    return pool[Math.floor(Math.random() * pool.length)];
+  }
+
+  function buildAIRoster(team, wins = 0) {
     let budget = Data.SQUAD_BUDGET;
     const units = [];
     const available = team.units.map(id => Data.UNITS[id]).sort((a, b) => b.cost - a.cost);
@@ -96,8 +120,10 @@ const Game = (() => {
     }
 
     const powerups = [];
-    const puList = ['med_pack', 'med_pack', 'mine'];
+    const puList = ['med_pack', 'med_pack', 'mine', 'teleporter']
+      .filter(id => isPowerupUnlockedForWins(id, wins));
     for (let i = 0; i < 2; i++) {
+      if (!puList.length) break;
       powerups.push(puList[Math.floor(Math.random() * puList.length)]);
     }
 

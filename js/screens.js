@@ -102,6 +102,8 @@ const Screens = (() => {
 
 
   const PLAYER_STATS_KEY = 'tactix2_player_stats';
+  const TEAM_UNLOCK_WINS = { azure: 0, vermillion: 0, phlox: 5, magma: 10, virent: 15 };
+  const POWERUP_UNLOCK_WINS = { med_pack: 0, mine: 1, teleporter: 7 };
 
   function loadPlayerStats() {
     try {
@@ -117,6 +119,46 @@ const Screens = (() => {
     } catch {
       return { wins:0, losses:0, teamUsage:{}, soldierUsage:{} };
     }
+  }
+
+  function isTeamUnlocked(teamId, wins = loadPlayerStats().wins) {
+    return wins >= (TEAM_UNLOCK_WINS[teamId] ?? 0);
+  }
+
+  function isPowerupUnlocked(powerupId, wins = loadPlayerStats().wins) {
+    return wins >= (POWERUP_UNLOCK_WINS[powerupId] ?? 0);
+  }
+
+  function getUnlockedTeamIds(wins = loadPlayerStats().wins) {
+    return Object.keys(Data.TEAMS).filter(id => isTeamUnlocked(id, wins));
+  }
+
+  function getUnlockedPowerupIds(wins = loadPlayerStats().wins) {
+    return Object.keys(Data.POWERUPS).filter(id => isPowerupUnlocked(id, wins));
+  }
+
+  function computeNewUnlocks(previousWins, currentWins) {
+    const unlocks = [];
+
+    Object.entries(TEAM_UNLOCK_WINS).forEach(([teamId, neededWins]) => {
+      if (neededWins > previousWins && neededWins <= currentWins) {
+        unlocks.push({ type:'team', id:teamId });
+      }
+    });
+
+    Object.entries(POWERUP_UNLOCK_WINS).forEach(([powerupId, neededWins]) => {
+      if (neededWins > previousWins && neededWins <= currentWins) {
+        unlocks.push({ type:'powerup', id:powerupId });
+      }
+    });
+
+    unlocks.sort((a, b) => {
+      const aReq = a.type === 'team' ? TEAM_UNLOCK_WINS[a.id] : POWERUP_UNLOCK_WINS[a.id];
+      const bReq = b.type === 'team' ? TEAM_UNLOCK_WINS[b.id] : POWERUP_UNLOCK_WINS[b.id];
+      return aReq - bReq || a.type.localeCompare(b.type) || a.id.localeCompare(b.id);
+    });
+
+    return unlocks;
   }
 
   function savePlayerStats(stats) {
@@ -138,11 +180,13 @@ const Screens = (() => {
   }
 
   function recordBattleOutcome(winner) {
-    if (winner !== 'player' && winner !== 'ai') return;
+    if (winner !== 'player' && winner !== 'ai') return [];
     const stats = loadPlayerStats();
+    const previousWins = stats.wins || 0;
     if (winner === 'player') stats.wins += 1;
     else stats.losses += 1;
     savePlayerStats(stats);
+    return winner === 'player' ? computeNewUnlocks(previousWins, stats.wins || 0) : [];
   }
 
   function favoriteKey(usageMap) {
@@ -318,6 +362,8 @@ const Screens = (() => {
     let fade = 0;
     let hovered = null;
     let selectedTeam = null;
+    const stats = loadPlayerStats();
+    const wins = stats.wins || 0;
 
     const layout = [
       { id: 'virent',     x: 180,  y: 430 },
@@ -334,13 +380,15 @@ const Screens = (() => {
     }
 
     function buildNav() {
-      buildTopBar('SELECT YOUR TEAM', () => E.setScreen(GameSelect()), selectedTeam ? () => E.setScreen(SquadBuilder(mode, selectedTeam)) : null, !!selectedTeam);
+      const nextEnabled = !!selectedTeam && isTeamUnlocked(selectedTeam, wins);
+      buildTopBar('SELECT YOUR TEAM', () => E.setScreen(GameSelect()), nextEnabled ? () => E.setScreen(SquadBuilder(mode, selectedTeam)) : null, nextEnabled);
     }
 
     function handleClick(e) {
       const {mx,my} = canvasMouse(e);
       layout.forEach((pos, i) => {
-        if (hit(mx, my, pos.x, pos.y, R)) selectedTeam = teams[i].id;
+        const team = teams[i];
+        if (hit(mx, my, pos.x, pos.y, R) && isTeamUnlocked(team.id, wins)) selectedTeam = team.id;
       });
       buildNav();
     }
@@ -348,7 +396,7 @@ const Screens = (() => {
       const {mx,my} = canvasMouse(e);
       hovered = null;
       layout.forEach((pos, i) => {
-        if (hit(mx, my, pos.x, pos.y, R)) hovered = teams[i].id;
+        if (hit(mx, my, pos.x, pos.y, R) && isTeamUnlocked(teams[i].id, wins)) hovered = teams[i].id;
       });
     }
 
@@ -369,11 +417,14 @@ const Screens = (() => {
       E.drawDim(ctx, 0.44);
       ctx.save();
       ctx.globalAlpha = fade;
-      teams.forEach((team, i) => drawTeamHex(ctx, layout[i].x, layout[i].y, R, team, hovered === team.id || selectedTeam === team.id));
+      teams.forEach((team, i) => {
+        const unlocked = isTeamUnlocked(team.id, wins);
+        drawTeamHex(ctx, layout[i].x, layout[i].y, R, team, unlocked && (hovered === team.id || selectedTeam === team.id), unlocked);
+      });
       ctx.restore();
     }
 
-    function drawTeamHex(ctx, cx, cy, r, team, hot) {
+    function drawTeamHex(ctx, cx, cy, r, team, hot, unlocked = true) {
       const portrait = E.getImage(team.portrait);
       const rr = hot ? r + 5 : r;
       ctx.save();
@@ -399,13 +450,21 @@ const Screens = (() => {
         ctx.restore();
       }
 
+      if (!unlocked) {
+        ctx.save();
+        hexPath6(ctx, cx, cy, rr - 1);
+        ctx.fillStyle = 'rgba(0,0,0,.56)';
+        ctx.fill();
+        ctx.restore();
+      }
+
       ctx.font = `${hot ? 20 : 18}px Iceberg`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillStyle = '#eef6fb';
       ctx.shadowColor = 'rgba(0,0,0,.95)';
       ctx.shadowBlur = 10;
-      ctx.fillText(team.name, cx, cy + rr * 0.68);
+      ctx.fillText(unlocked ? team.name : 'PLAY TO UNLOCK', cx, cy + rr * 0.68);
       ctx.shadowBlur = 0;
       ctx.restore();
     }
@@ -418,6 +477,10 @@ const Screens = (() => {
   // ──────────────────────────────────────────────────────────
   function SquadBuilder(mode, teamId) {
     const team = Data.TEAMS[teamId];
+    const wins = loadPlayerStats().wins || 0;
+    if (!isTeamUnlocked(teamId, wins)) {
+      return TeamSelect(mode);
+    }
     let roster   = [];
     let powerups = [];
 
@@ -667,9 +730,9 @@ const Screens = (() => {
       const state = Game.getState();
       state.onPhaseChange = () => buildUI();
       state.onGameOver = (winner, reason) => {
-        recordBattleOutcome(winner);
+        const unlocks = recordBattleOutcome(winner);
         gameOver = true;
-        setTimeout(() => showEndOverlay(winner, reason), 900);
+        setTimeout(() => showEndOverlay(winner, reason, unlocks), 900);
       };
       E.getCanvas().addEventListener('click', handleClick);
       E.getCanvas().addEventListener('mousemove', handleMove);
@@ -999,7 +1062,7 @@ const Screens = (() => {
     }
 
     // ── End game overlay ──────────────────────────────────
-    function showEndOverlay(winner, reason) {
+    function showEndOverlay(winner, reason, unlocks = []) {
       const ui = E.getUI();
       const overlay = el('div'); overlay.className = 'tx-overlay';
 
@@ -1008,16 +1071,23 @@ const Screens = (() => {
 
       const isWin = winner==='player', isDraw = winner==='draw';
       const col = isWin ? '#3ad870' : isDraw ? '#c8c060' : '#d83030';
+      const playerTeam = Data.TEAMS[teamId];
 
       const resultEl = el('div', { fontFamily:'Iceberg,monospace', fontSize:'44px',
         letterSpacing:'7px', color:col, textShadow:`0 0 32px ${col}`, marginBottom:'14px' });
       resultEl.textContent = isWin ? 'VICTORY' : isDraw ? 'DRAW' : 'DEFEAT';
 
       const reasonEl = el('div', { fontFamily:'RobotoMono,monospace', fontSize:'12px',
-        color:'#5a7888', marginBottom:'38px' });
+        color:'#5a7888', marginBottom: unlocks.length ? '20px' : '38px' });
       reasonEl.textContent = reason;
 
       if (isWin || !isDraw) E.playMusic('score');
+
+      let unlockWrap = null;
+      if (isWin && unlocks.length) {
+        unlockWrap = el('div', { display:'flex', flexDirection:'column', gap:'12px', alignItems:'center', margin:'0 0 30px 0' });
+        unlocks.forEach(unlock => unlockWrap.appendChild(buildUnlockRow(unlock, playerTeam)));
+      }
 
       const again = txBtn('PLAY AGAIN', () => E.setScreen(Battle(mode, teamId, roster, powerups)));
       again.classList.add('primary');
@@ -1026,7 +1096,9 @@ const Screens = (() => {
       const btnRow = el('div', { display:'flex', justifyContent:'center', gap:'14px' });
       btnRow.append(again, home);
 
-      panel.append(resultEl, reasonEl, btnRow);
+      panel.append(resultEl, reasonEl);
+      if (unlockWrap) panel.appendChild(unlockWrap);
+      panel.appendChild(btnRow);
       overlay.appendChild(panel);
       ui.appendChild(overlay);
     }
@@ -1179,6 +1251,33 @@ const Screens = (() => {
     return wrap;
   }
 
+  function buildUnlockRow(unlock, playerTeam) {
+    const row = el('div', {
+      display:'flex', alignItems:'center', justifyContent:'center', gap:'12px',
+      fontFamily:'Iceberg,monospace', color:'#eef6fb', letterSpacing:'2px'
+    });
+
+    const prefix = el('div', { fontSize:'18px', color:'#8fb0bf', textTransform:'uppercase' });
+    prefix.textContent = 'YOU UNLOCKED';
+
+    let icon;
+    let labelText;
+    if (unlock.type === 'team') {
+      const team = Data.TEAMS[unlock.id];
+      icon = buildHexIcon(team.portrait, team.color, false, 54, 62, 38);
+      labelText = team.name;
+    } else {
+      const powerup = Data.POWERUPS[unlock.id];
+      icon = buildHexIcon(powerupIconKey(powerup.id), playerTeam.color, true, 54, 62, 30);
+      labelText = powerup.name;
+    }
+
+    const label = el('div', { fontSize:'24px', color:'#ffffff', textTransform:'uppercase' });
+    label.textContent = labelText;
+
+    row.append(prefix, label, icon);
+    return row;
+  }
 
 function drawCombatPopup(ctx, data) {
   const x = 348, y = 196, w = 584, h = 168;
