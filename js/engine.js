@@ -28,12 +28,32 @@ const TactixEngine = (() => {
     { key: 'rock_texture',  src: 'assets/tiles/rock_texture.png' },
     { key: 'acid_texture',  src: 'assets/tiles/acid_texture.png' },
     { key: 'fire_texture',  src: 'assets/tiles/fire_texture.png' },
-    // Sprites (full soldier for game board)
+    // Sprites (full soldier for game board) — legacy fallbacks
     { key: 'azure_soldier_sprite',      src: 'assets/sprites/azure_soldier_sprite.png' },
     { key: 'phlox_soldier_sprite',      src: 'assets/sprites/phlox_soldier_sprite.png' },
     { key: 'vermillion_soldier_sprite', src: 'assets/sprites/vermillion_soldier_sprite.png' },
     { key: 'virent_soldier_sprite',     src: 'assets/sprites/virent_soldier_sprite.png' },
     { key: 'magma_soldier_sprite',      src: 'assets/sprites/magma_soldier_sprite.png' },
+    // Per-unit sprites — Azure
+    { key: 'azure_infantry_sprite',     src: 'assets/sprites/azure_infantry_sprite.png' },
+    { key: 'azure_sniper_sprite',       src: 'assets/sprites/azure_sniper_sprite.png' },
+    { key: 'azure_elite_sprite',        src: 'assets/sprites/azure_elite_sprite.png' },
+    // Per-unit sprites — Phlox
+    { key: 'phlox_infantry_sprite',       src: 'assets/sprites/phlox_infantry_sprite.png' },
+    { key: 'phlox_sniper_sprite',         src: 'assets/sprites/phlox_sniper_sprite.png' },
+    { key: 'phlox_shock_trooper_sprite',  src: 'assets/sprites/phlox_shock_trooper_sprite.png' },
+    // Per-unit sprites — Vermillion
+    { key: 'vermillion_infantry_sprite',  src: 'assets/sprites/vermillion_infantry_sprite.png' },
+    { key: 'vermillion_sniper_sprite',    src: 'assets/sprites/vermillion_sniper_sprite.png' },
+    { key: 'vermillion_grenadier_sprite', src: 'assets/sprites/vermillion_grenadier_sprite.png' },
+    // Per-unit sprites — Virent
+    { key: 'virent_slasher_sprite',       src: 'assets/sprites/virent_slasher_sprite.png' },
+    { key: 'virent_assassin_sprite',      src: 'assets/sprites/virent_assassin_sprite.png' },
+    { key: 'virent_acid_thrower_sprite',  src: 'assets/sprites/virent_acid_thrower_sprite.png' },
+    // Per-unit sprites — Magma
+    { key: 'magma_grunt_sprite',          src: 'assets/sprites/magma_grunt_sprite.png' },
+    { key: 'magma_sparkshooter_sprite',   src: 'assets/sprites/magma_sparkshooter_sprite.png' },
+    { key: 'magma_flame_thrower_sprite',  src: 'assets/sprites/magma_flame_thrower_sprite.png' },
     // Portraits (for squad builder / team select)
     { key: 'azure-soldier',     src: 'assets/soldiers/azure-soldier.png' },
     { key: 'phlox-soldier',     src: 'assets/soldiers/phlox-soldier.png' },

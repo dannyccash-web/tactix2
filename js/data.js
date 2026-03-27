@@ -64,6 +64,36 @@ const Data = (() => {
     }
   };
 
+  // ── Per-team, per-unit sprite lookup ─────────────────────
+  // Maps teamId → unitId → spriteKey (loaded in engine manifest)
+  const UNIT_SPRITES = {
+    azure: {
+      infantry:    'azure_infantry_sprite',
+      sniper:      'azure_sniper_sprite',
+      elite:       'azure_elite_sprite'
+    },
+    phlox: {
+      infantry:    'phlox_infantry_sprite',
+      sniper:      'phlox_sniper_sprite',
+      shock_trooper: 'phlox_shock_trooper_sprite'
+    },
+    vermillion: {
+      infantry:    'vermillion_infantry_sprite',
+      sniper:      'vermillion_sniper_sprite',
+      grenadier:   'vermillion_grenadier_sprite'
+    },
+    virent: {
+      slasher:     'virent_slasher_sprite',
+      assassin:    'virent_assassin_sprite',
+      acid_reign:  'virent_acid_thrower_sprite'
+    },
+    magma: {
+      grunt:         'magma_grunt_sprite',
+      sparkshooter:  'magma_sparkshooter_sprite',
+      flame_thrower: 'magma_flame_thrower_sprite'
+    }
+  };
+
   // ── Power-up definitions ─────────────────────────────────
   const POWERUPS = {
     med_pack: {
@@ -150,5 +180,5 @@ const Data = (() => {
   const BOARD_COLS = 20;
   const BOARD_ROWS = 10;
 
-  return { UNITS, POWERUPS, TEAMS, SQUAD_BUDGET, POWERUP_CAP, MOVE_POOL, OBSTACLE_COUNT, BOARD_COLS, BOARD_ROWS };
+  return { UNITS, POWERUPS, TEAMS, UNIT_SPRITES, SQUAD_BUDGET, POWERUP_CAP, MOVE_POOL, OBSTACLE_COUNT, BOARD_COLS, BOARD_ROWS };
 })();

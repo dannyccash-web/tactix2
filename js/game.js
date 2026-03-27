@@ -821,7 +821,9 @@ const Game = (() => {
     const p = (unit.visualX != null && unit.visualY != null) ? { x: unit.visualX, y: unit.visualY } : Board.hexCenter(unit.col, unit.row);
     const { x, y } = p;
 
-    const spriteImg = TactixEngine.getImage(unit.team.spriteKey);
+    const unitSpriteKey = (Data.UNIT_SPRITES[unit.team.id] && Data.UNIT_SPRITES[unit.team.id][unit.id])
+      || unit.team.spriteKey;
+    const spriteImg = TactixEngine.getImage(unitSpriteKey);
 
     // Sprite dimensions (used for HP bar position)
     const sw = Board.HEX_R * 2.18;
