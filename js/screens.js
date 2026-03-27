@@ -133,7 +133,7 @@ const Screens = (() => {
       if (logo) {
         const lw = 820;
         const lh = logo.height * (lw / logo.width);
-        ctx.drawImage(logo, (1280 - lw) / 2, 52 + lh, lw, lh);
+        ctx.drawImage(logo, (1280 - lw) / 2, 34, lw, lh);
       }
 
       ctx.textAlign = 'center';
@@ -141,8 +141,8 @@ const Screens = (() => {
       ctx.shadowColor = 'transparent';
       ctx.shadowBlur = 0;
       ctx.font = '34px Iceberg';
-      ctx.fillStyle = '#466070';
-      ctx.fillText('TURN-BASED COMBAT', 640, 410);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText('TURN-BASED COMBAT', 640, 292);
 
       const bw = 250, bh = 64;
       const bx = 640 - bw / 2, by = 480;
@@ -346,7 +346,7 @@ const Screens = (() => {
       ctx.fillStyle = '#eef6fb';
       ctx.shadowColor = 'rgba(0,0,0,.95)';
       ctx.shadowBlur = 10;
-      ctx.fillText(team.name, cx, cy + rr * 0.75);
+      ctx.fillText(team.name, cx, cy + rr * 0.68);
       ctx.shadowBlur = 0;
       ctx.restore();
     }
@@ -485,7 +485,7 @@ const Screens = (() => {
         info.appendChild(sp);
       }
 
-      const costEl = el('div', { fontFamily:'Iceberg,monospace', fontSize:'15px', color: u.cost<=rem?'#f0d34f':'#c84444', flexShrink:'0' });
+      const costEl = el('div', { fontFamily:'Iceberg,monospace', fontSize:'15px', color: u.cost<=rem?'#f0d34f':'rgb(74, 96, 112)', flexShrink:'0' });
       costEl.textContent = u.cost + 'pts.';
 
       const addBtn = txBtn('+', () => addUnit(uid));
@@ -508,7 +508,7 @@ const Screens = (() => {
       desc.textContent = pu.desc;
       info.append(nm, desc);
 
-      const costEl = el('div', { fontFamily:'Iceberg,monospace', fontSize:'15px', color: pu.cost<=rem?'#f0d34f':'#c84444', flexShrink:'0' });
+      const costEl = el('div', { fontFamily:'Iceberg,monospace', fontSize:'15px', color: pu.cost<=rem?'#f0d34f':'rgb(74, 96, 112)', flexShrink:'0' });
       costEl.textContent = pu.cost + 'pts.';
 
       const addBtn = txBtn('+', () => addPowerup(pu.id));

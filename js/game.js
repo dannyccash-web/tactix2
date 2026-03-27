@@ -221,6 +221,16 @@ const Game = (() => {
           state.highlights[Board.idx(target.col, target.row)] = 'attack';
         }
       });
+      if (u.special === 'acid_tile') {
+        for (let row = 0; row < Board.ROWS; row++) {
+          for (let col = 0; col < Board.COLS; col++) {
+            const dist = Board.hexDistance(u.col, u.row, col, row);
+            if (dist <= u.range && Board.hasLOS(u.col, u.row, col, row) && Board.isPassable(col, row) && !unitAt(col, row)) {
+              state.highlights[Board.idx(col, row)] = 'attack';
+            }
+          }
+        }
+      }
       // Can also attack mines
       state.mines
         .filter(m => m.owner !== u.side)
@@ -327,6 +337,22 @@ const Game = (() => {
     if (!state || !attacker || attacker.hp <= 0) return false;
     if (attacker.attackedThisTurn || attacker.stunned || (state.mode === 'ctf' && attacker.hasFlag)) return false;
 
+    const dist = Board.hexDistance(attacker.col, attacker.row, targetCol, targetRow);
+    const inRange = dist <= attacker.range;
+    const hasLOS = Board.hasLOS(attacker.col, attacker.row, targetCol, targetRow);
+    if (!inRange || !hasLOS) return false;
+
+    const defender = unitAt(targetCol, targetRow);
+    if (!defender && attacker.special === 'acid_tile' && Board.isPassable(targetCol, targetRow)) {
+      attacker.attackedThisTurn = true;
+      Board.setTile(targetCol, targetRow, Board.TILE.ACID);
+      TactixEngine.playSFX('gunshot');
+      logMsg(`${attacker.name} created an acid pool`);
+      clearSelection();
+      rebuildHighlights();
+      return true;
+    }
+
     // Check for mine target
     const mine = state.mines.find(m => m.col === targetCol && m.row === targetRow);
     if (mine) {
@@ -335,10 +361,9 @@ const Game = (() => {
       triggerMine(mine, null); // detonation without stepping unit
       clearSelection();
       rebuildHighlights();
-      return;
+      return true;
     }
 
-    const defender = unitAt(targetCol, targetRow);
     if (!defender || defender.side === attacker.side || defender.hp <= 0) return false;
 
     attacker.attackedThisTurn = true;
@@ -821,7 +846,7 @@ const Game = (() => {
     const p = (unit.visualX != null && unit.visualY != null) ? { x: unit.visualX, y: unit.visualY } : Board.hexCenter(unit.col, unit.row);
     const { x, y } = p;
 
-    const unitSpriteKey = (Data.UNIT_SPRITES[unit.team.id] && Data.UNIT_SPRITES[unit.team.id][unit.id])
+    const unitSpriteKey = (Data.UNIT_SPRITES[unit.team.id] && Data.UNIT_SPRITES[unit.team.id][unit.type])
       || unit.team.spriteKey;
     const spriteImg = TactixEngine.getImage(unitSpriteKey);
 
@@ -857,7 +882,7 @@ const Game = (() => {
     const feetY = sy + sh;
 
     // HP bar — 2px gap above feet (visually just below the sprite bottom edge)
-    drawHPBar(ctx, x, feetY - 8, unit);
+    drawHPBar(ctx, x, feetY - 12, unit);
 
     // Status icons just below HP bar
     drawStatusIcons(ctx, x, feetY + 2, unit);

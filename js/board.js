@@ -117,12 +117,35 @@ const Board = (() => {
     return { col: q, row: r + Math.floor((q + (q & 1)) / 2) };
   }
 
-  // hexDistance counts the minimum number of tile steps between two hexes,
-  // consistent with the neighbors() function (verified exhaustively).
+  function axialToCube(q, r) {
+    return { x: q, z: r, y: -q - r };
+  }
+
+  function cubeDistance(a, b) {
+    return Math.max(Math.abs(a.x - b.x), Math.abs(a.y - b.y), Math.abs(a.z - b.z));
+  }
+
+  function cubeLerp(a, b, t) {
+    return {
+      x: a.x + (b.x - a.x) * t,
+      y: a.y + (b.y - a.y) * t,
+      z: a.z + (b.z - a.z) * t
+    };
+  }
+
+  function cubeRound(c) {
+    let rx = Math.round(c.x), ry = Math.round(c.y), rz = Math.round(c.z);
+    const dx = Math.abs(rx - c.x), dy = Math.abs(ry - c.y), dz = Math.abs(rz - c.z);
+    if (dx > dy && dx > dz) rx = -ry - rz;
+    else if (dy > dz) ry = -rx - rz;
+    else rz = -rx - ry;
+    return { x: rx, y: ry, z: rz };
+  }
+
+  // hexDistance counts the minimum number of tile steps between two hexes.
   function hexDistance(c1, r1, c2, r2) {
-    const a = toAxial(c1, r1), b = toAxial(c2, r2);
-    const dq = a.q - b.q, dr = a.r - b.r;
-    return Math.max(Math.abs(dq), Math.abs(dr), Math.abs(dq + dr));
+    const aAx = toAxial(c1, r1), bAx = toAxial(c2, r2);
+    return cubeDistance(axialToCube(aAx.q, aAx.r), axialToCube(bAx.q, bAx.r));
   }
 
   function neighbors(col, row) {
@@ -187,14 +210,12 @@ const Board = (() => {
 
   function hasLOS(c1, r1, c2, r2) {
     const dist = hexDistance(c1, r1, c2, r2);
-    if (dist <= 1) return true;  // adjacent tiles always have LOS
+    if (dist <= 1) return true;
     const a1 = toAxial(c1, r1), a2 = toAxial(c2, r2);
+    const cA = axialToCube(a1.q, a1.r), cB = axialToCube(a2.q, a2.r);
     for (let i = 1; i < dist; i++) {
-      const t = i / dist;
-      const q = a1.q + (a2.q - a1.q) * t;
-      const r = a1.r + (a2.r - a1.r) * t;
-      const rq = Math.round(q), rr = Math.round(r);
-      const off = axialToOffset(rq, rr);
+      const step = cubeRound(cubeLerp(cA, cB, i / dist));
+      const off = axialToOffset(step.x, step.z);
       if (getTile(off.col, off.row) === TILE.OBSTACLE) return false;
     }
     return true;
@@ -349,13 +370,27 @@ const Board = (() => {
     ctx.restore();
   }
 
+  function pointInPolygon(px, py, pts) {
+    let inside = false;
+    for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+      const xi = pts[i].x, yi = pts[i].y;
+      const xj = pts[j].x, yj = pts[j].y;
+      const intersect = ((yi > py) !== (yj > py)) &&
+        (px < (xj - xi) * (py - yi) / ((yj - yi) || 1e-9) + xi);
+      if (intersect) inside = !inside;
+    }
+    return inside;
+  }
+
   function tileAtPoint(px, py) {
     let best = null, bestDist = Infinity;
     for (let row = 0; row < ROWS; row++) {
       for (let col = 0; col < COLS; col++) {
+        const pts = transformedHexBounds(col, row).map(p => ({ x: ORIGIN_X + p.x, y: ORIGIN_Y + p.y }));
+        if (!pointInPolygon(px, py, pts)) continue;
         const { x, y } = hexCenter(col, row);
         const d = Math.hypot(px - x, py - y);
-        if (d < HEX_R * 1.05 && d < bestDist) {
+        if (d < bestDist) {
           bestDist = d;
           best = { col, row };
         }
