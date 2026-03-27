@@ -867,8 +867,10 @@ const Game = (() => {
     const spriteAspect = spriteImg ? (spriteImg.width / spriteImg.height) : fallbackAspect;
     const sh = targetSpriteH;
     const sw = sh * spriteAspect;
+    const spriteOffsetX = unit.side === 'ai' ? -4 : 4;
+    const drawX = x + spriteOffsetX;
     const feetY = y + Board.HEX_R * 0.34;
-    const sx = x - sw / 2;
+    const sx = drawX - sw / 2;
     const sy = feetY - sh;
 
     ctx.save();
@@ -876,7 +878,7 @@ const Game = (() => {
     if (spriteImg) {
       if (unit.stunned) ctx.filter = 'brightness(2.2) saturate(0)';
       if (unit.side === 'ai') {
-        ctx.translate(x, 0);
+        ctx.translate(drawX, 0);
         ctx.scale(-1, 1);
         ctx.drawImage(spriteImg, -sw / 2, sy, sw, sh);
       } else {

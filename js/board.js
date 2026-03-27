@@ -339,39 +339,27 @@ const Board = (() => {
 
   function drawMineToken(ctx, cx, cy, mine) {
     ctx.save();
-    ctx.translate(cx, cy);
+    ctx.translate(cx, cy + 1);
     const tint = mine.color || (mine.owner === 'player' ? '#3a8afa' : '#fa5050');
-    const outerR = 12;
-    ctx.beginPath();
-    ctx.arc(0, 0, outerR, 0, Math.PI * 2);
-    ctx.fillStyle = withAlpha(tint, 0.28);
-    ctx.fill();
-    ctx.strokeStyle = tint;
-    ctx.lineWidth = 2;
-    ctx.stroke();
 
     const img = TactixEngine.getImage('mine_icon');
     if (img) {
-      const w = 16;
-      const h = img.height * (w / img.width);
+      const h = 18;
+      const w = h * (img.width / img.height);
       ctx.drawImage(img, -w / 2, -h / 2, w, h);
       ctx.globalCompositeOperation = 'source-atop';
       ctx.fillStyle = tint;
       ctx.fillRect(-w / 2, -h / 2, w, h);
       ctx.globalCompositeOperation = 'source-over';
-      ctx.strokeStyle = 'rgba(255,255,255,0.9)';
-      ctx.lineWidth = 0.75;
-      ctx.strokeRect(-w / 2, -h / 2, w, h);
     } else {
-      const s = 6;
-      ctx.beginPath();
-      ctx.moveTo(0, -s); ctx.lineTo(s, 0); ctx.lineTo(0, s); ctx.lineTo(-s, 0);
-      ctx.closePath();
+      const r = 6;
       ctx.fillStyle = tint;
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = '#fff';
-      ctx.lineWidth = 1;
-      ctx.stroke();
+      [[0,-10],[0,10],[-10,0],[10,0]].forEach(([px, py]) => {
+        ctx.fillRect(px - 1.5, py - 4, 3, 8);
+      });
     }
     ctx.restore();
   }
