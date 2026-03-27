@@ -129,11 +129,20 @@ const Screens = (() => {
       ctx.save();
       ctx.globalAlpha = fade;
 
+      const bw = 250, bh = 64;
+      const gap = bh;
       const logo = E.getImage('logo');
+      const lw = logo ? 820 : 0;
+      const lh = logo ? (logo.height * (lw / logo.width)) : 0;
+      const subtitleH = 34;
+      const groupH = lh + gap + subtitleH + gap + bh;
+      const groupTop = Math.round((720 - groupH) / 2);
+      const subtitleY = Math.round(groupTop + lh + gap + subtitleH / 2);
+      const bx = 640 - bw / 2;
+      const by = Math.round(groupTop + lh + gap + subtitleH + gap);
+
       if (logo) {
-        const lw = 820;
-        const lh = logo.height * (lw / logo.width);
-        ctx.drawImage(logo, (1280 - lw) / 2, 34, lw, lh);
+        ctx.drawImage(logo, Math.round((1280 - lw) / 2), groupTop, lw, lh);
       }
 
       ctx.textAlign = 'center';
@@ -142,10 +151,8 @@ const Screens = (() => {
       ctx.shadowBlur = 0;
       ctx.font = '34px Iceberg';
       ctx.fillStyle = '#ffffff';
-      ctx.fillText('TURN-BASED COMBAT', 640, 292);
+      ctx.fillText('TURN-BASED COMBAT', 640, subtitleY);
 
-      const bw = 250, bh = 64;
-      const bx = 640 - bw / 2, by = 480;
       ctx.fillStyle = 'rgba(14,26,38,.68)';
       ctx.fillRect(bx, by, bw, bh);
       ctx.strokeStyle = '#7da4b3';

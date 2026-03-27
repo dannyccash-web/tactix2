@@ -403,6 +403,15 @@ const Game = (() => {
     if (unit.hp <= 0) killUnit(unit);
   }
 
+  function detonateMineAt(col, row) {
+    const mine = state.mines.find(m => m.col === col && m.row === row);
+    if (mine) triggerMine(mine, null);
+  }
+
+  function detonateAdjacentMines(col, row) {
+    Board.neighbors(col, row).forEach(nb => detonateMineAt(nb.col, nb.row));
+  }
+
   function applySpecial(attacker, defender) {
     switch (attacker.special) {
       case 'splash':
@@ -411,6 +420,7 @@ const Game = (() => {
           if (u && u.side !== attacker.side && u.hp > 0) {
             applyDamage(u, 1, 'splash');
           }
+          detonateMineAt(nb.col, nb.row);
         });
         break;
       case 'stun':
@@ -438,6 +448,7 @@ const Game = (() => {
             // Any unit already on that tile takes 2 damage immediately
             const u = unitAt(nb.col, nb.row);
             if (u && u.hp > 0) applyDamage(u, 2, 'fire');
+            detonateMineAt(nb.col, nb.row);
           }
         });
         break;
@@ -523,7 +534,7 @@ const Game = (() => {
       }
     } else if (state.puState === PUSTATE.MINE) {
       if (Board.isPassable(col, row) && !unitAt(col, row)) {
-        state.mines.push({ col, row, owner: 'player' });
+        state.mines.push({ col, row, owner: 'player', teamId: state.playerTeam.id, color: state.playerTeam.color });
         removePowerup('player', 'mine');
         state.puState = PUSTATE.NONE;
         state.highlights = {};
@@ -679,7 +690,7 @@ const Game = (() => {
     checkWin();
     if (state.phase === PHASE.OVER) return;
 
-    const api = { liveUnits, unitAt, moveUnit: aiMoveUnit, attackTarget, removePowerup, logMsg, checkWin, endGame, findPath: Board.findPath };
+    const api = { liveUnits, unitAt, moveUnit: aiMoveUnit, attackTarget, removePowerup, logMsg, checkWin, endGame, findPath: Board.findPath, getAITeam: () => state.aiTeam };
 
     // Sort: closest-to-enemy first
     const playerUnits = liveUnits('player');
@@ -850,11 +861,16 @@ const Game = (() => {
       || unit.team.spriteKey;
     const spriteImg = TactixEngine.getImage(unitSpriteKey);
 
-    // Sprite dimensions (used for HP bar position)
-    const sw = Board.HEX_R * 2.18;
-    const sh = sw * (1536 / 1024);
+    // Uniform sprite fit so units read clearly against a single tile.
+    const maxSpriteW = Board.HEX_R * 1.55;
+    const maxSpriteH = Board.HEX_R * 2.18;
+    const spriteAspect = spriteImg ? (spriteImg.width / spriteImg.height) : (1024 / 1536);
+    const fitScale = spriteImg ? Math.min(maxSpriteW / spriteImg.width, maxSpriteH / spriteImg.height) : 1;
+    const sw = spriteImg ? (spriteImg.width * fitScale) : maxSpriteW;
+    const sh = spriteImg ? (spriteImg.height * fitScale) : (maxSpriteW / spriteAspect);
+    const feetY = y + Board.HEX_R * 0.42;
     const sx = x - sw / 2;
-    const sy = y - sh + Board.HEX_R * 0.80;
+    const sy = feetY - sh;
 
     ctx.save();
     ctx.globalAlpha = unit.stunned ? 0.5 : 1;
@@ -879,10 +895,8 @@ const Game = (() => {
     }
     ctx.restore();
 
-    const feetY = sy + sh;
-
-    // HP bar — 2px gap above feet (visually just below the sprite bottom edge)
-    drawHPBar(ctx, x, feetY - 12, unit);
+    // HP bar — tucked a bit closer to the unit and slightly higher on the tile
+    drawHPBar(ctx, x, feetY - 10, unit);
 
     // Status icons just below HP bar
     drawStatusIcons(ctx, x, feetY + 2, unit);

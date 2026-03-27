@@ -23,7 +23,7 @@ const AI = (() => {
 
   // Called after all units have acted to optionally place a mine
   function placeMine(state, api) {
-    const { liveUnits, unitAt, removePowerup, logMsg } = api;
+    const { liveUnits, unitAt, removePowerup, logMsg, getAITeam } = api;
     const mineIdx = state.aiPowerups.indexOf('mine');
     const stillPlayers = liveUnits('player');
     if (mineIdx !== -1 && stillPlayers.length > 0) {
@@ -35,7 +35,8 @@ const AI = (() => {
       );
       if (nearTiles.length) {
         const t = nearTiles[0];
-        state.mines.push({ col: t.col, row: t.row, owner: 'ai' });
+        const aiTeam = getAITeam ? getAITeam() : null;
+        state.mines.push({ col: t.col, row: t.row, owner: 'ai', teamId: aiTeam?.id || 'ai', color: aiTeam?.color || '#fa5050' });
         removePowerup('ai', 'mine');
         logMsg('AI placed a mine');
       }
