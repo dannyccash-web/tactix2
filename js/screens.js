@@ -495,6 +495,8 @@ const Screens = (() => {
     }
     function removeUnit(i) { roster.splice(i,1); buildUI(); }
     function addPowerup(id) {
+      const wins = loadPlayerStats().wins || 0;
+      if (!isPowerupUnlocked(id, wins)) return;
       if (powerups.length >= Data.POWERUP_CAP) return;
       if (totalCost() + Data.POWERUPS[id].cost > Data.SQUAD_BUDGET) return;
       powerups.push(id); buildUI();
@@ -547,7 +549,9 @@ const Screens = (() => {
       team.units.forEach(uid => left.appendChild(buildUnitCard(uid, rem)));
 
       sectionHeader(left, 'POWER UPS', {marginTop:'18px'});
-      Object.values(Data.POWERUPS).forEach(pu =>
+      const unlockedPowerups = Object.values(Data.POWERUPS)
+        .filter(pu => isPowerupUnlocked(pu.id, wins));
+      unlockedPowerups.forEach(pu =>
         left.appendChild(buildPUCard(pu, rem, powerups.length))
       );
 
