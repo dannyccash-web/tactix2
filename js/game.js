@@ -861,14 +861,13 @@ const Game = (() => {
       || unit.team.spriteKey;
     const spriteImg = TactixEngine.getImage(unitSpriteKey);
 
-    // Uniform sprite fit so units read clearly against a single tile.
-    const maxSpriteW = Board.HEX_R * 1.55;
-    const maxSpriteH = Board.HEX_R * 2.18;
-    const spriteAspect = spriteImg ? (spriteImg.width / spriteImg.height) : (1024 / 1536);
-    const fitScale = spriteImg ? Math.min(maxSpriteW / spriteImg.width, maxSpriteH / spriteImg.height) : 1;
-    const sw = spriteImg ? (spriteImg.width * fitScale) : maxSpriteW;
-    const sh = spriteImg ? (spriteImg.height * fitScale) : (maxSpriteW / spriteAspect);
-    const feetY = y + Board.HEX_R * 0.42;
+    // Keep every unit sprite at the exact same rendered height so no class reads smaller.
+    const targetSpriteH = Board.HEX_R * 2.18;
+    const fallbackAspect = 1024 / 1536;
+    const spriteAspect = spriteImg ? (spriteImg.width / spriteImg.height) : fallbackAspect;
+    const sh = targetSpriteH;
+    const sw = sh * spriteAspect;
+    const feetY = y + Board.HEX_R * 0.34;
     const sx = x - sw / 2;
     const sy = feetY - sh;
 
@@ -895,11 +894,11 @@ const Game = (() => {
     }
     ctx.restore();
 
-    // HP bar — tucked a bit closer to the unit and slightly higher on the tile
-    drawHPBar(ctx, x, feetY - 10, unit);
+    // HP bar — tucked close to the unit feet
+    drawHPBar(ctx, x, feetY - 8, unit);
 
     // Status icons just below HP bar
-    drawStatusIcons(ctx, x, feetY + 2, unit);
+    drawStatusIcons(ctx, x, feetY + 4, unit);
 
     // Flag indicator — black flag icon on bearer
     if (unit.hasFlag) {

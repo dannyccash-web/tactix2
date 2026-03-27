@@ -100,6 +100,58 @@ const Screens = (() => {
     document.head.appendChild(s);
   })();
 
+
+  const PLAYER_STATS_KEY = 'tactix2_player_stats';
+
+  function loadPlayerStats() {
+    try {
+      const raw = localStorage.getItem(PLAYER_STATS_KEY);
+      if (!raw) return { wins:0, losses:0, teamUsage:{}, soldierUsage:{} };
+      const parsed = JSON.parse(raw);
+      return {
+        wins: Number(parsed.wins) || 0,
+        losses: Number(parsed.losses) || 0,
+        teamUsage: parsed.teamUsage || {},
+        soldierUsage: parsed.soldierUsage || {}
+      };
+    } catch {
+      return { wins:0, losses:0, teamUsage:{}, soldierUsage:{} };
+    }
+  }
+
+  function savePlayerStats(stats) {
+    try {
+      localStorage.setItem(PLAYER_STATS_KEY, JSON.stringify(stats));
+    } catch {}
+  }
+
+  function bumpCount(map, key, amount = 1) {
+    if (!key) return;
+    map[key] = (Number(map[key]) || 0) + amount;
+  }
+
+  function recordBattleUsage(teamId, roster) {
+    const stats = loadPlayerStats();
+    bumpCount(stats.teamUsage, teamId, 1);
+    (roster || []).forEach(unitId => bumpCount(stats.soldierUsage, unitId, 1));
+    savePlayerStats(stats);
+  }
+
+  function recordBattleOutcome(winner) {
+    if (winner !== 'player' && winner !== 'ai') return;
+    const stats = loadPlayerStats();
+    if (winner === 'player') stats.wins += 1;
+    else stats.losses += 1;
+    savePlayerStats(stats);
+  }
+
+  function favoriteKey(usageMap) {
+    const entries = Object.entries(usageMap || {});
+    if (!entries.length) return null;
+    entries.sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+    return entries[0][0];
+  }
+
   // ──────────────────────────────────────────────────────────
   // TITLE SCREEN
   // ──────────────────────────────────────────────────────────
@@ -610,10 +662,12 @@ const Screens = (() => {
 
     // ── Screen lifecycle ──────────────────────────────────
     function enter() {
+      recordBattleUsage(teamId, roster);
       Game.start({ mode, playerTeam: teamId, playerRoster: roster, playerPowerups: powerups });
       const state = Game.getState();
       state.onPhaseChange = () => buildUI();
       state.onGameOver = (winner, reason) => {
+        recordBattleOutcome(winner);
         gameOver = true;
         setTimeout(() => showEndOverlay(winner, reason), 900);
       };
@@ -790,7 +844,7 @@ const Screens = (() => {
         borderRight:'1px solid #0e1e2c', minWidth:'140px'
       });
 
-      ['ROSTER','SETTINGS','RULES'].forEach(tab => {
+      ['ROSTER','SETTINGS','STATS','RULES'].forEach(tab => {
         const t = el('button'); t.className = 'menu-tab-btn';
         if (menuTab === tab.toLowerCase()) t.classList.add('active');
         t.textContent = tab;
@@ -798,7 +852,7 @@ const Screens = (() => {
         tabSidebar.appendChild(t);
       });
 
-      const closeBtn = txBtn('✕', () => { menuOpen = false; buildUI(); });
+      const closeBtn = txBtn('CLOSE', () => { menuOpen = false; buildUI(); });
       closeBtn.style.cssText += ';margin-top:auto;border:none;padding:10px 14px;font-size:13px;';
       tabSidebar.appendChild(closeBtn);
 
@@ -830,6 +884,32 @@ const Screens = (() => {
             content.appendChild(row);
           });
         });
+      } else if (menuTab === 'stats') {
+        const stats = loadPlayerStats();
+        const favoriteTeamId = favoriteKey(stats.teamUsage);
+        const favoriteSoldierId = favoriteKey(stats.soldierUsage);
+
+        const statsGrid = el('div', { display:'grid', gridTemplateColumns:'180px 1fr', rowGap:'14px', columnGap:'14px' });
+        const addStatRow = (label, value) => {
+          const l = el('div', { fontFamily:'Iceberg,monospace', fontSize:'12px', letterSpacing:'2px', color:'#7fa4b4' });
+          l.textContent = label;
+          const v = el('div', { fontFamily:'RobotoMono,monospace', fontSize:'12px', color:'#d7e6ee' });
+          v.textContent = value;
+          statsGrid.append(l, v);
+        };
+
+        const favoriteTeamName = favoriteTeamId && Data.TEAMS[favoriteTeamId] ? Data.TEAMS[favoriteTeamId].name : 'N/A';
+        const favoriteSoldierName = favoriteSoldierId && Data.UNITS[favoriteSoldierId] ? Data.UNITS[favoriteSoldierId].name : 'N/A';
+
+        addStatRow('WINS', String(stats.wins || 0));
+        addStatRow('LOSSES', String(stats.losses || 0));
+        addStatRow('FAVORITE TEAM', favoriteTeamName);
+        addStatRow('FAVORITE SOLDIER', favoriteSoldierName);
+        content.appendChild(statsGrid);
+
+        const note = el('div', { fontFamily:'RobotoMono,monospace', fontSize:'10px', color:'#4f6a78', marginTop:'18px', lineHeight:'1.5' });
+        note.textContent = 'Stats are saved locally in this browser. Favorite team and soldier are based on what you use most in battle.';
+        content.appendChild(note);
       } else if (menuTab === 'settings') {
         // Volume sliders
         function makeSlider(label, initialVal, onChange) {
