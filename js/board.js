@@ -7,8 +7,7 @@ const Board = (() => {
   const COLS = Data.BOARD_COLS;
   const ROWS = Data.BOARD_ROWS;
 
-  // Board art in the visual guide uses flat-top hexes, then the whole board is
-  // sheared and vertically compressed to create an isometric feel.
+  // Board uses flat-top hexes rendered flat (no isometric shear or compression).
   const HEX_R   = 31;
   const HEX_W   = HEX_R * 2;
   const HEX_H   = Math.sqrt(3) * HEX_R;
@@ -16,8 +15,8 @@ const Board = (() => {
   const STEP_Y  = HEX_H;
   const COL_Y_OFFSET = HEX_H / 2;
 
-  const SHEAR   = Math.tan(Math.PI / 6); // 30 degrees
-  const SCALE_Y = 0.75;
+  const SHEAR   = 0; // no horizontal shear
+  const SCALE_Y = 1; // no vertical compression
 
   const GAME_TOP    = 48;
   const GAME_BOTTOM = 56;
