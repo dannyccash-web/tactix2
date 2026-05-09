@@ -94,6 +94,16 @@ const Data = (() => {
     }
   };
 
+  // ── Flagbearer sprites (CTF) ─────────────────────────────
+  // Maps teamId → spriteKey for the unit carrying the flag
+  const FLAGBEARER_SPRITES = {
+    azure:      'azure_flagbearer_sprite',
+    phlox:      'phlox_flagbearer_sprite',
+    vermillion: 'vermillion_flagbearer_sprite',
+    virent:     'virent_flagbearer_sprite',
+    magma:      'magma_flagbearer_sprite'
+  };
+
   // ── Power-up definitions ─────────────────────────────────
   const POWERUPS = {
     med_pack: {
@@ -180,5 +190,5 @@ const Data = (() => {
   const BOARD_COLS = 20;
   const BOARD_ROWS = 10;
 
-  return { UNITS, POWERUPS, TEAMS, UNIT_SPRITES, SQUAD_BUDGET, POWERUP_CAP, MOVE_POOL, OBSTACLE_COUNT, BOARD_COLS, BOARD_ROWS };
+  return { UNITS, POWERUPS, TEAMS, UNIT_SPRITES, FLAGBEARER_SPRITES, SQUAD_BUDGET, POWERUP_CAP, MOVE_POOL, OBSTACLE_COUNT, BOARD_COLS, BOARD_ROWS };
 })();

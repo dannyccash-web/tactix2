@@ -73,8 +73,16 @@ const TactixEngine = (() => {
     { key: 'acid_thrower_icon',       src: 'assets/icons/acid_thrower_icon.png' },
     { key: 'med_pack_icon',           src: 'assets/icons/med_pack_icon.png' },
     { key: 'mine_icon',               src: 'assets/icons/mine_icon.svg' },
+    { key: 'mine_sprite',             src: 'assets/sprites/mine_sprite.png' },
+    { key: 'flag_sprite',             src: 'assets/sprites/flag_sprite.png' },
     { key: 'teleporter_icon',         src: 'assets/icons/teleporter_icon.png' },
     { key: 'fire_caller_icon',        src: 'assets/icons/fire_caller_icon.png' },
+    // CTF flagbearer sprites (one per team)
+    { key: 'azure_flagbearer_sprite',      src: 'assets/sprites/azure_flagbearer_sprite.png' },
+    { key: 'phlox_flagbearer_sprite',      src: 'assets/sprites/phlox_flagbearer_sprite.png' },
+    { key: 'vermillion_flagbearer_sprite', src: 'assets/sprites/vermillion_flagbearer_sprite.png' },
+    { key: 'virent_flagbearer_sprite',     src: 'assets/sprites/virent_flagbearer_sprite.png' },
+    { key: 'magma_flagbearer_sprite',      src: 'assets/sprites/magma_flagbearer_sprite.png' },
     // Backgrounds
     { key: 'bg1', src: 'assets/backgrounds/tactix_background.png' },
     { key: 'bg2', src: 'assets/backgrounds/tactix_background_2.png' },

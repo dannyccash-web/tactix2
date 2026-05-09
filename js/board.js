@@ -338,19 +338,16 @@ const Board = (() => {
 
   function drawMineToken(ctx, cx, cy, mine) {
     ctx.save();
-    ctx.translate(cx, cy + 1);
-    const tint = mine.color || (mine.owner === 'player' ? '#3a8afa' : '#fa5050');
-
-    const img = TactixEngine.getImage('mine_icon');
-    if (img) {
-      const h = 18;
-      const w = h * (img.width / img.height);
-      ctx.drawImage(img, -w / 2, -h / 2, w, h);
-      ctx.globalCompositeOperation = 'source-atop';
-      ctx.fillStyle = tint;
-      ctx.fillRect(-w / 2, -h / 2, w, h);
-      ctx.globalCompositeOperation = 'source-over';
+    ctx.translate(cx, cy);
+    const sprite = TactixEngine.getImage('mine_sprite');
+    if (sprite) {
+      // Render mine sprite centered on the hex, sized to fit within the tile
+      const h = HEX_R * 1.4;
+      const w = h * (sprite.width / sprite.height);
+      ctx.drawImage(sprite, -w / 2, -h / 2, w, h);
     } else {
+      // Fallback: tinted circle with spikes
+      const tint = mine.color || (mine.owner === 'player' ? '#3a8afa' : '#fa5050');
       const r = 6;
       ctx.fillStyle = tint;
       ctx.beginPath();
@@ -365,16 +362,24 @@ const Board = (() => {
 
   function drawFlag(ctx, col, row) {
     const { x, y } = hexCenter(col, row);
+    const sprite = TactixEngine.getImage('flag_sprite');
     ctx.save();
-    ctx.translate(x, y - 4);
-    // Black flag pole and flag
-    ctx.strokeStyle = '#222222';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(0, 8); ctx.lineTo(0, -12); ctx.stroke();
-    ctx.fillStyle = '#111111';
-    ctx.beginPath();
-    ctx.moveTo(0, -12); ctx.lineTo(12, -7); ctx.lineTo(0, -2); ctx.closePath(); ctx.fill();
+    if (sprite) {
+      // Size the flag to sit above the hex tile, anchored at the bottom centre
+      const h = HEX_R * 3.2;
+      const w = h * (sprite.width / sprite.height);
+      ctx.drawImage(sprite, x - w / 2, y - h + HEX_R * 0.2, w, h);
+    } else {
+      // Fallback: simple canvas-drawn flag
+      ctx.translate(x, y - 4);
+      ctx.strokeStyle = '#222222';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(0, 8); ctx.lineTo(0, -12); ctx.stroke();
+      ctx.fillStyle = '#111111';
+      ctx.beginPath();
+      ctx.moveTo(0, -12); ctx.lineTo(12, -7); ctx.lineTo(0, -2); ctx.closePath(); ctx.fill();
+    }
     ctx.restore();
   }
 

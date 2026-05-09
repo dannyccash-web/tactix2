@@ -224,7 +224,8 @@ const Game = (() => {
     // Note: board render uses hl.color for 'selected' type
 
     if (state.phase === PHASE.MOVE && !u.stunned) {
-      const maxSteps = Math.min(u.speed - u.speedUsedThisTurn, state.movePool);
+      const flagbeaerSpeed = (state.mode === 'ctf' && u.hasFlag) ? 3 : u.speed;
+      const maxSteps = Math.min(flagbeaerSpeed - u.speedUsedThisTurn, state.movePool);
       const reach = Board.reachable(u.col, u.row, maxSteps, (c, r) => {
         return !!unitAt(c, r);
       });
@@ -282,7 +283,7 @@ const Game = (() => {
   // ── Movement ─────────────────────────────────────────────
   function moveUnit(unit, toCol, toRow, callback) {
     if (unit.stunned) return;
-    const maxSpeed = (state.mode === 'ctf' && unit.hasFlag) ? 2 : unit.speed;
+    const maxSpeed = (state.mode === 'ctf' && unit.hasFlag) ? 3 : unit.speed;
     const maxSteps = Math.min(maxSpeed - unit.speedUsedThisTurn, state.movePool);
     const path = Board.findPath(unit.col, unit.row, toCol, toRow, (c, r) => !!unitAt(c, r));
     if (!path || path.length > maxSteps) return;
@@ -301,8 +302,13 @@ const Game = (() => {
       // Check CTF flag pickup
       if (state.mode === 'ctf' && state.flag && !state.flag.carrier) {
         if (unit.col === state.flag.col && unit.row === state.flag.row) {
+          // Restore movement used to reach the flag — flagbearers get a fresh 3-move allotment
+          state.movePool += unit.speedUsedThisTurn;
+          unit.speedUsedThisTurn = 0;
+          unit.movedThisTurn = false;
           state.flag.carrier = unit.id;
           unit.hasFlag = true;
+          logMsg(`${unit.name} picked up the flag!`);
         }
       }
 
@@ -768,7 +774,7 @@ const Game = (() => {
   // AI version of move with visual step-through animation
   function aiMoveUnit(unit, toCol, toRow) {
     if (unit.stunned) return;
-    const maxSpeed = (state.mode === 'ctf' && unit.hasFlag) ? 2 : unit.speed;
+    const maxSpeed = (state.mode === 'ctf' && unit.hasFlag) ? 3 : unit.speed;
     const maxSteps = Math.min(maxSpeed - unit.speedUsedThisTurn, state.movePool);
     const path = Board.findPath(unit.col, unit.row, toCol, toRow, (c, r) => !!unitAt(c, r));
     if (!path || path.length > maxSteps) return;
@@ -791,6 +797,7 @@ const Game = (() => {
     state.aiVisualDelay = Math.max(state.aiVisualDelay || 0, path.length * 0.1 + 0.25);
 
     // Resolve logic immediately while visuals catch up
+    let pickedUpFlag = false;
     for (const step of path) {
       unit.col = step.col;
       unit.row = step.row;
@@ -800,8 +807,16 @@ const Game = (() => {
         if (unit.col === state.flag.col && unit.row === state.flag.row) {
           state.flag.carrier = unit.id;
           unit.hasFlag = true;
+          pickedUpFlag = true;
+          logMsg(`${unit.name} picked up the flag!`);
         }
       }
+    }
+    // Flagbearer gets a fresh 3-move allotment when the flag is picked up
+    if (pickedUpFlag) {
+      state.movePool += unit.speedUsedThisTurn;
+      unit.speedUsedThisTurn = 0;
+      unit.movedThisTurn = false;
     }
 
     // CTF win check
@@ -883,8 +898,10 @@ const Game = (() => {
     const p = (unit.visualX != null && unit.visualY != null) ? { x: unit.visualX, y: unit.visualY } : Board.hexCenter(unit.col, unit.row);
     const { x, y } = p;
 
-    const unitSpriteKey = (Data.UNIT_SPRITES[unit.team.id] && Data.UNIT_SPRITES[unit.team.id][unit.type])
-      || unit.team.spriteKey;
+    // Use flagbearer sprite when carrying the flag, otherwise use regular unit sprite
+    const unitSpriteKey = (unit.hasFlag && Data.FLAGBEARER_SPRITES[unit.team.id])
+      ? Data.FLAGBEARER_SPRITES[unit.team.id]
+      : ((Data.UNIT_SPRITES[unit.team.id] && Data.UNIT_SPRITES[unit.team.id][unit.type]) || unit.team.spriteKey);
     const spriteImg = TactixEngine.getImage(unitSpriteKey);
 
     // Keep every unit sprite at the exact same rendered height so no class reads smaller.
@@ -927,20 +944,6 @@ const Game = (() => {
 
     // Status icons just below HP bar
     drawStatusIcons(ctx, x, feetY + 4, unit);
-
-    // Flag indicator — black flag icon on bearer
-    if (unit.hasFlag) {
-      ctx.save();
-      ctx.fillStyle = '#111111';
-      ctx.strokeStyle = '#555555';
-      ctx.lineWidth = 0.5;
-      ctx.font = 'bold 14px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('⚑', x + Board.HEX_R * 0.6, y - Board.HEX_R * 1.1);
-      ctx.restore();
-    }
-
   }
 
   function drawHPBar(ctx, cx, barY, unit) {
