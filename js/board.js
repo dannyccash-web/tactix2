@@ -341,10 +341,13 @@ const Board = (() => {
     ctx.translate(cx, cy);
     const sprite = TactixEngine.getImage('mine_sprite');
     if (sprite) {
-      // Render mine sprite centered on the hex, sized to fit within the tile
-      const h = HEX_R * 1.4;
+      // The mine sprite is a tall portrait image (1024x1536); the mine disc sits
+      // in roughly the lower 45% of the canvas. Render large and anchor high so
+      // the disc appears at the hex centre and reads clearly.
+      const h = HEX_R * 2.4;
       const w = h * (sprite.width / sprite.height);
-      ctx.drawImage(sprite, -w / 2, -h / 2, w, h);
+      // Draw so the bottom of the image is ~10% below hex centre (disc centred ~at cy)
+      ctx.drawImage(sprite, -w / 2, -h * 0.9, w, h);
     } else {
       // Fallback: tinted circle with spikes
       const tint = mine.color || (mine.owner === 'player' ? '#3a8afa' : '#fa5050');
@@ -365,10 +368,11 @@ const Board = (() => {
     const sprite = TactixEngine.getImage('flag_sprite');
     ctx.save();
     if (sprite) {
-      // Size the flag to sit above the hex tile, anchored at the bottom centre
-      const h = HEX_R * 3.2;
+      // Flag sprite is a tall portrait (1024x1536). Smaller than before and
+      // shifted down so the base of the pole sits closer to the hex tile.
+      const h = HEX_R * 2.2;
       const w = h * (sprite.width / sprite.height);
-      ctx.drawImage(sprite, x - w / 2, y - h + HEX_R * 0.2, w, h);
+      ctx.drawImage(sprite, x - w / 2, y - h + HEX_R * 0.7, w, h);
     } else {
       // Fallback: simple canvas-drawn flag
       ctx.translate(x, y - 4);

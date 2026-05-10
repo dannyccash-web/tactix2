@@ -228,7 +228,7 @@ const AI = (() => {
   function doCarrierMove(unit, state, api) {
     const { moveUnit } = api;
     // Flag bearer can only move 2 spaces
-    const maxSteps = Math.min(2, unit.speed - unit.speedUsedThisTurn, state.movePool);
+    const maxSteps = Math.min(3, unit.speed - unit.speedUsedThisTurn, state.movePool);
     if (maxSteps <= 0) return;
     let bestBase = null, bestDist = Infinity;
     for (const b of Board.AI_BASE) {

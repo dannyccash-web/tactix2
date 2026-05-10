@@ -904,8 +904,13 @@ const Game = (() => {
       : ((Data.UNIT_SPRITES[unit.team.id] && Data.UNIT_SPRITES[unit.team.id][unit.type]) || unit.team.spriteKey);
     const spriteImg = TactixEngine.getImage(unitSpriteKey);
 
-    // Keep every unit sprite at the exact same rendered height so no class reads smaller.
-    const targetSpriteH = Board.HEX_R * 2.18;
+    // Flagbearer sprites are 1024x1536 tall portraits; the flag pole occupies the
+    // top ~35% of the image, leaving the soldier body in the lower ~65%. To keep
+    // the soldier body the same rendered size as regular units (HEX_R * 2.18),
+    // we render the full flagbearer image taller so the body portion scales up to match.
+    // Regular sprites vary in aspect but their content fills the full image height.
+    const isFlagbearer = unit.hasFlag && !!Data.FLAGBEARER_SPRITES[unit.team.id];
+    const targetSpriteH = isFlagbearer ? Board.HEX_R * 3.6 : Board.HEX_R * 2.18;
     const fallbackAspect = 1024 / 1536;
     const spriteAspect = spriteImg ? (spriteImg.width / spriteImg.height) : fallbackAspect;
     const sh = targetSpriteH;
