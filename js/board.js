@@ -109,11 +109,12 @@ const Board = (() => {
   function setTile(c, r, t) { if (c >= 0 && c < COLS && r >= 0 && r < ROWS) tiles[idx(c, r)] = t; }
   function isPassable(c, r) { const t = getTile(c, r); return t === TILE.EMPTY || t === TILE.ACID || t === TILE.FIRE; }
 
+  // Odd-q offset → axial: odd columns are shifted down, so r = row - floor(col/2)
   function toAxial(col, row) {
-    return { q: col, r: row - Math.floor((col + (col & 1)) / 2) };
+    return { q: col, r: row - Math.floor(col / 2) };
   }
   function axialToOffset(q, r) {
-    return { col: q, row: r + Math.floor((q + (q & 1)) / 2) };
+    return { col: q, row: r + Math.floor(q / 2) };
   }
 
   function axialToCube(q, r) {
@@ -148,9 +149,10 @@ const Board = (() => {
   }
 
   function neighbors(col, row) {
-    // Offsets derived to match the toAxial / hexDistance coordinate system
-    const even = [[-1,0],[-1,1],[0,-1],[0,1],[1,0],[1,1]];
-    const odd  = [[-1,-1],[-1,0],[0,-1],[0,1],[1,-1],[1,0]];
+    // Odd-q offset coordinates: odd columns are shifted DOWN by half a hex.
+    // Even-col diagonal neighbours are at row-1; odd-col diagonals are at row+1.
+    const even = [[-1,-1],[-1,0],[0,-1],[0,1],[1,-1],[1,0]];
+    const odd  = [[-1,0],[-1,1],[0,-1],[0,1],[1,0],[1,1]];
     const offs = (col % 2 === 0) ? even : odd;
     return offs.map(([dc,dr]) => ({ col: col + dc, row: row + dr }))
       .filter(({ col:c, row:r }) => c >= 0 && c < COLS && r >= 0 && r < ROWS);
@@ -213,7 +215,9 @@ const Board = (() => {
     const a1 = toAxial(c1, r1), a2 = toAxial(c2, r2);
     const cA = axialToCube(a1.q, a1.r), cB = axialToCube(a2.q, a2.r);
     for (let i = 1; i < dist; i++) {
-      const step = cubeRound(cubeLerp(cA, cB, i / dist));
+      // Small epsilon nudge prevents the lerp landing exactly on a hex corner,
+      // which can cause cubeRound to pick the wrong tile at edge-case angles.
+      const step = cubeRound(cubeLerp(cA, cB, i / dist + 1e-6));
       const off = axialToOffset(step.x, step.z);
       if (getTile(off.col, off.row) === TILE.OBSTACLE) return false;
     }
@@ -347,7 +351,7 @@ const Board = (() => {
       const h = HEX_R * 2.4;
       const w = h * (sprite.width / sprite.height);
       // Draw so the bottom of the image is ~10% below hex centre (disc centred ~at cy)
-      ctx.drawImage(sprite, -w / 2, -h * 0.9, w, h);
+      ctx.drawImage(sprite, -w / 2 + HEX_R * 0.2, -h * 0.75, w, h);
     } else {
       // Fallback: tinted circle with spikes
       const tint = mine.color || (mine.owner === 'player' ? '#3a8afa' : '#fa5050');
