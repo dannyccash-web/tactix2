@@ -910,7 +910,7 @@ const Game = (() => {
     // we render the full flagbearer image taller so the body portion scales up to match.
     // Regular sprites vary in aspect but their content fills the full image height.
     const isFlagbearer = unit.hasFlag && !!Data.FLAGBEARER_SPRITES[unit.team.id];
-    const targetSpriteH = isFlagbearer ? Board.HEX_R * 3.0 : Board.HEX_R * 2.18;
+    const targetSpriteH = isFlagbearer ? Board.HEX_R * 2.8 : Board.HEX_R * 2.0;
     const fallbackAspect = 1024 / 1536;
     const spriteAspect = spriteImg ? (spriteImg.width / spriteImg.height) : fallbackAspect;
     const sh = targetSpriteH;
@@ -918,7 +918,7 @@ const Game = (() => {
     const spriteOffsetX = unit.side === 'ai' ? -4 : 4;
     const drawX = x + spriteOffsetX;
     // Flagbearers are drawn slightly lower so the soldier body sits at the hex centre
-    const feetY = y + Board.HEX_R * (isFlagbearer ? 0.55 : 0.34);
+    const feetY = y + Board.HEX_R * (isFlagbearer ? 0.65 : 0.44);
     const sx = drawX - sw / 2;
     const sy = feetY - sh;
 
@@ -946,10 +946,10 @@ const Game = (() => {
     ctx.restore();
 
     // HP bar — tucked close to the unit feet
-    drawHPBar(ctx, x, feetY - 8, unit);
+    drawHPBar(ctx, x, feetY + 2, unit);
 
     // Status icons just below HP bar
-    drawStatusIcons(ctx, x, feetY + 4, unit);
+    drawStatusIcons(ctx, x, feetY + 14, unit);
   }
 
   function drawHPBar(ctx, cx, barY, unit) {
