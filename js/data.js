@@ -19,12 +19,12 @@ const Data = (() => {
     },
     elite: {
       id: 'elite', name: 'ELITE', cost: 6,
-      speed: 7, range: 3, atk: 5, def: 2, dmg: 4, hp: 6,
+      speed: 6, range: 3, atk: 5, def: 2, dmg: 4, hp: 6,
       special: null
     },
     grenadier: {
       id: 'grenadier', name: 'GRENADIER', cost: 6,
-      speed: 3, range: 4, atk: 2, def: 5, dmg: 5, hp: 6,
+      speed: 3, range: 4, atk: 3, def: 5, dmg: 5, hp: 6,
       special: 'splash'
     },
     shock_trooper: {
