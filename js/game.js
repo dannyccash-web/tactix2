@@ -258,15 +258,13 @@ const Game = (() => {
           }
         }
       }
-      // Can also attack mines
-      state.mines
-        .filter(m => m.owner !== u.side)
-        .forEach(m => {
-          const dist = Board.hexDistance(u.col, u.row, m.col, m.row);
-          if (dist <= u.range && Board.hasLOS(u.col, u.row, m.col, m.row)) {
-            state.highlights[Board.idx(m.col, m.row)] = 'attack';
-          }
-        });
+      // Any mine in range (friendly or enemy) can be attacked and detonated
+      state.mines.forEach(m => {
+        const dist = Board.hexDistance(u.col, u.row, m.col, m.row);
+        if (dist <= u.range && Board.hasLOS(u.col, u.row, m.col, m.row)) {
+          state.highlights[Board.idx(m.col, m.row)] = 'attack';
+        }
+      });
     }
 
     // CTF base overlays
@@ -490,6 +488,7 @@ const Game = (() => {
 
   function killUnit(unit) {
     unit.hp = 0;
+    TactixEngine.playSFX('death_scream');
     // Drop CTF flag
     if (unit.hasFlag && state.flag) {
       state.flag.carrier = null;
@@ -500,6 +499,7 @@ const Game = (() => {
   }
 
   function triggerMine(mine, stepper) {
+    TactixEngine.playSFX('explosion');
     // Remove mine
     state.mines = state.mines.filter(m => m !== mine);
     // Direct hit
@@ -911,10 +911,11 @@ const Game = (() => {
     // Regular sprites vary in aspect but their content fills the full image height.
     const isFlagbearer = unit.hasFlag && !!Data.FLAGBEARER_SPRITES[unit.team.id];
     const targetSpriteH = isFlagbearer ? Board.HEX_R * 2.8 : Board.HEX_R * 2.0;
-    const fallbackAspect = 1024 / 1536;
-    const spriteAspect = spriteImg ? (spriteImg.width / spriteImg.height) : fallbackAspect;
     const sh = targetSpriteH;
-    const sw = sh * spriteAspect;
+    // Non-flagbearers: fixed square footprint so every unit renders the same
+    // size regardless of sprite image dimensions (sprites vary from 524–1009px wide).
+    const flagAspect = spriteImg ? (spriteImg.width / spriteImg.height) : (1024 / 1536);
+    const sw = isFlagbearer ? sh * flagAspect : sh;
     const spriteOffsetX = unit.side === 'ai' ? -4 : 4;
     const drawX = x + spriteOffsetX;
     // Flagbearers are drawn slightly lower so the soldier body sits at the hex centre

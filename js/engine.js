@@ -92,8 +92,10 @@ const TactixEngine = (() => {
 
   const AUDIO_MANIFEST = [
     { key: 'score',    src: 'assets/music/tactix_score.mp3',  loop: true,  volume: 0.4 },
-    { key: 'gunshot',  src: 'assets/sounds/Gun_Shot.mp3',     loop: false, volume: 0.6 },
-    { key: 'ricochet', src: 'assets/sounds/Gun_Ricochet.mp3', loop: false, volume: 0.5 }
+    { key: 'gunshot',      src: 'assets/sounds/Gun_Shot.mp3',       loop: false, volume: 0.6 },
+    { key: 'ricochet',     src: 'assets/sounds/Gun_Ricochet.mp3',   loop: false, volume: 0.5 },
+    { key: 'explosion',    src: 'assets/sounds/explosion.mp3',       loop: false, volume: 0.7 },
+    { key: 'death_scream', src: 'assets/sounds/death_scream.mp3',    loop: false, volume: 0.6 }
   ];
 
   // ── Asset loading ────────────────────────────────────────
@@ -130,13 +132,16 @@ const TactixEngine = (() => {
           progress(key);
           resolve();
         }
-        audio.oncanplaythrough = () => { assets.audio[key] = audio; done(); };
-        audio.onerror = () => { console.warn('Failed to load audio:', src); done(); };
-        // Fallback: resolve after 3s even if canplaythrough never fires
-        setTimeout(done, 3000);
+        // Register immediately so playSFX always has an element, even if
+        // canplaythrough hasn't fired yet (slow connection / first visit).
         audio._src = src;
         audio._volume = volume;
         audio._loop = loop;
+        assets.audio[key] = audio;
+        audio.oncanplaythrough = done;
+        audio.onerror = () => { console.warn('Failed to load audio:', src); done(); };
+        // Fallback: resolve after 5s even if canplaythrough never fires
+        setTimeout(done, 5000);
         audio.src = src;
       })
     );
@@ -173,8 +178,8 @@ const TactixEngine = (() => {
 
   function playSFX(key) {
     const src = assets.audio[key];
-    if (!src || !musicUnlocked) return;
-    const sfx = new Audio(src._src || src.src);
+    if (!src) return;
+    const sfx = new Audio(src.src || src._src);
     sfx.volume = sfxVolume;
     sfx.play().catch(() => {});
   }
