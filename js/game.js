@@ -267,13 +267,15 @@ const Game = (() => {
       });
     }
 
-    // CTF base overlays
-    if (state.mode === 'ctf') {
-      Board.PLAYER_BASE.forEach(b => {
-        state.highlights[Board.idx(b.col, b.row)] = 'base_player';
-      });
-      Board.AI_BASE.forEach(b => {
-        state.highlights[Board.idx(b.col, b.row)] = 'base_ai';
+    // CTF: when the flag carrier is selected in the move phase, highlight their
+    // own base tiles as valid destinations even if another unit occupies them.
+    if (state.phase === PHASE.MOVE && state.mode === 'ctf' && u.hasFlag) {
+      const baseTiles = u.side === 'player' ? Board.PLAYER_BASE : Board.AI_BASE;
+      baseTiles.forEach(b => {
+        const path = Board.findPath(u.col, u.row, b.col, b.row, (c, r) => !!unitAt(c, r));
+        if (path && path.length <= maxSteps) {
+          state.highlights[Board.idx(b.col, b.row)] = { type: 'move', color: u.team.color || '#3a8afa' };
+        }
       });
     }
   }
@@ -598,6 +600,21 @@ const Game = (() => {
         state.puState = PUSTATE.NONE;
         state.highlights = {};
         logMsg(`${u.name} teleported`);
+        // Flag pickup on teleport destination
+        if (state.mode === 'ctf' && state.flag && !state.flag.carrier) {
+          if (u.col === state.flag.col && u.row === state.flag.row) {
+            state.flag.carrier = u.id;
+            u.hasFlag = true;
+            logMsg(`${u.name} picked up the flag!`);
+          }
+        }
+        // CTF win: flag carrier teleported onto own base
+        if (state.mode === 'ctf' && u.hasFlag) {
+          const baseTiles = u.side === 'player' ? Board.PLAYER_BASE : Board.AI_BASE;
+          if (baseTiles.some(b => b.col === u.col && b.row === u.row)) {
+            endGame(u.side === 'player' ? 'player' : 'ai', 'Flag captured!');
+          }
+        }
         return true;
       }
     }
@@ -889,8 +906,35 @@ const Game = (() => {
     });
     unitsToDraw.forEach(u => drawUnit(ctx, u));
 
+    // CTF: pulse the carrier's target base tiles so the player knows where to go
+    if (state.mode === 'ctf' && state.flag && state.flag.carrier) {
+      const carrier = allUnits().find(u => u.id === state.flag.carrier);
+      if (carrier && carrier.hp > 0) {
+        const pulse = 0.18 + 0.14 * Math.sin(Date.now() / 280);
+        const baseTiles = carrier.side === 'player' ? Board.PLAYER_BASE : Board.AI_BASE;
+        const baseColor = carrier.side === 'player'
+          ? (state.playerTeam.color || '#3a9fd4')
+          : (state.aiTeam.color  || '#fa5050');
+        baseTiles.forEach(b => {
+          const { x, y } = Board.hexCenter(b.col, b.row);
+          Board.drawHexPath(ctx, x, y, Board.HEX_R);
+          ctx.fillStyle   = `rgba(${hexToRgb(baseColor)},${pulse.toFixed(3)})`;
+          ctx.fill();
+          ctx.strokeStyle = `rgba(${hexToRgb(baseColor)},${Math.min(1, pulse * 3).toFixed(3)})`;
+          ctx.lineWidth   = 2.5;
+          ctx.stroke();
+        });
+      }
+    }
+
     // Draw animations
     drawAnims(ctx);
+  }
+
+  function hexToRgb(hex) {
+    const h = hex.replace('#','');
+    const full = h.length === 3 ? h.split('').map(c=>c+c).join('') : h;
+    return `${parseInt(full.slice(0,2),16)},${parseInt(full.slice(2,4),16)},${parseInt(full.slice(4,6),16)}`;
   }
 
   function drawUnit(ctx, unit) {
