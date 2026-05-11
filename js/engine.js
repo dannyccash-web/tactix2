@@ -152,8 +152,8 @@ const TactixEngine = (() => {
   // ── Audio ────────────────────────────────────────────────
   let currentMusic = null;
   let musicUnlocked = false;
-  let musicVolume = 0.4;
-  let sfxVolume = 0.6;
+  let musicVolume = 0.5;
+  let sfxVolume = 0.75;
 
   function playMusic(key) {
     if (currentMusic) {

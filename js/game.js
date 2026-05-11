@@ -914,8 +914,8 @@ const Game = (() => {
     const sh = targetSpriteH;
     // Non-flagbearers: fixed square footprint so every unit renders the same
     // size regardless of sprite image dimensions (sprites vary from 524–1009px wide).
-    const flagAspect = spriteImg ? (spriteImg.width / spriteImg.height) : (1024 / 1536);
-    const sw = isFlagbearer ? sh * flagAspect : sh;
+    const spriteAspect = spriteImg ? (spriteImg.width / spriteImg.height) : (1024 / 1536);
+    const sw = sh * spriteAspect;
     const spriteOffsetX = unit.side === 'ai' ? -4 : 4;
     const drawX = x + spriteOffsetX;
     // Flagbearers are drawn slightly lower so the soldier body sits at the hex centre
